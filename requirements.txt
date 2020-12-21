@@ -1,0 +1,18 @@
+# required for package use
+tqdm
+pandas
+openpyxl
+xlrd
+
+# temporary fix
+numpy==1.19.3
+
+# required for package development
+pytest
+pytest-benchmark
+black
+pylint
+pycodestyle
+pydocstyle
+ipykernel
+faker

@@ -1,0 +1,54 @@
+{
+    "files.trimTrailingWhitespace": true,
+    "python.formatting.provider": "black",
+    "python.pythonPath": "C:\\Users\\tklimmer\\AppData\\Local\\Continuum\\miniconda3\\envs\\ambre\\python.exe",
+    "outline.showArrays": false,
+    "outline.showBooleans": false,
+    "outline.showEnumMembers": false,
+    "outline.showFiles": false,
+    "outline.showKeys": false,
+    "outline.showModules": false,
+    "outline.showNamespaces": false,
+    "outline.showNull": false,
+    "outline.showNumbers": false,
+    "outline.showObjects": false,
+    "outline.showOperators": false,
+    "outline.showPackages": false,
+    "outline.showProperties": false,
+    "outline.showStrings": false,
+    "outline.showFields": false,
+    "outline.showEnums": false,
+    "outline.showTypeParameters": false,
+    "outline.showVariables": false,
+    "editor.rulers": [
+        {
+            "column": 120,
+            "color": "#333333"
+        }
+    ],
+    "python.formatting.blackArgs": [
+        "--line-length=120"
+    ],
+    "python.analysis.disabled": [
+        "unresolved-import"
+    ],
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.pylintArgs": [
+        "--max-line-length=180",
+        "--disable=dangerous-default-value,too-many-arguments,bad-continuation,redefined-outer-name,protected-access,too-few-public-methods,wrong-import-order"
+    ],
+    "python.linting.pycodestyleEnabled": true,
+    "python.linting.pycodestyleArgs": [
+        "--ignore=D205,D400,E203,E211,E501,E231,E722,E302,W391,E265,W503,W292",
+    ],
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.linting.pydocstyleEnabled": true,
+    "editor.minimap.enabled": false,
+    "jupyter.jupyterServerType": "local",
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pytestEnabled": true,
+}

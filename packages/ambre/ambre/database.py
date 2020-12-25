@@ -15,15 +15,41 @@ class Database:
     """Transaction database for mining association rules."""
 
     def __init__(
-        self, consequents=[], normalize_whitespace=True, case_insensitive=True, item_separator_for_string_outputs=" ∪ "
+        self,
+        consequents=[],
+        normalize_whitespace=True,
+        case_insensitive=True,
+        max_antecedents_length=None,
+        item_separator_for_string_outputs=" ∪ ",
     ):
         """Init."""
-        self.settings = Settings(consequents, normalize_whitespace, case_insensitive, item_separator_for_string_outputs)
+        self.settings = Settings(
+            consequents,
+            normalize_whitespace,
+            case_insensitive,
+            max_antecedents_length,
+            item_separator_for_string_outputs,
+        )
         self.preprocessor = Preprocessor(self.settings)
         self.itemsets_trie = ItemsetsTrie(
-            self.preprocessor.normalized_consequents, self.settings.item_separator_for_string_outputs
+            self.preprocessor.normalized_consequents,
+            self.settings.max_antecedents_length,
+            self.settings.item_separator_for_string_outputs,
         )
         self.manual_rules = []
+
+    def insert_from_pandas_dataframe_rows(self, pandas_df, sampling_ratio=1, input_columns=None, show_progress=True):
+        """Interpret each row in the given pandas dataframe as transaction and insert those."""
+        if not 0 <= sampling_ratio <= 1:
+            raise ValueError(
+                f"Parameter 'sampling_ratio' needs to be between 0 and 1. Specified value is: {sampling_ratio}."
+            )
+        columns = input_columns if input_columns else pandas_df.columns
+        self.insert_transactions(
+            [[f"{column}:{row[column]}" for column in columns] for _, row in pandas_df.iterrows()],
+            sampling_ratio,
+            show_progress,
+        )
 
     def insert_transactions(self, transactions, sampling_ratio=1, show_progress=True):
         """Insert the given transactions, optionally sampling to enable larger datasets."""
@@ -63,17 +89,17 @@ class Database:
     def derive_frequent_itemsets(
         self,
         filter_to_consequent_itemsets_only=False,
-        minimum_itemset_length=0,
-        maximum_itemset_length=None,
-        minimum_occurences=0,
-        maximum_occurences=None,
-        minimum_support=0,
-        maximum_support=1,
+        min_itemset_length=0,
+        max_itemset_length=None,
+        min_occurrences=0,
+        max_occurrences=None,
+        min_support=0,
+        max_support=1,
     ):
         """Derive the frequent itemsets from the internally assembled trie and return them as a dict object."""
 
         def _recursive_trie_walkdown_depth_first(node, level_number):
-            result = {"itemset": [], "occurences": [], "support": [], "itemset_length": []}
+            result = {"itemset": [], "occurrences": [], "support": [], "itemset_length": []}
             for child_item in self.preprocessor.sort_itemset_consequents_first(node.children.keys()):
                 child_node = node.children[child_item]
                 if level_number == 0 and filter_to_consequent_itemsets_only and not child_node.consequents:
@@ -81,17 +107,17 @@ class Database:
                     # => no need to continue => break the recursion
                     break
                 itemset_length = child_node.itemset_length
-                occurences = child_node.occurences
+                occurrences = child_node.occurrences
                 support = child_node.support
                 if (
-                    itemset_length >= minimum_itemset_length
-                    and ((maximum_itemset_length is None) or (itemset_length <= maximum_itemset_length))
-                    and ((maximum_occurences is None) or (occurences <= maximum_occurences))
-                    and (occurences >= minimum_occurences)
-                    and (minimum_support <= support <= maximum_support)
+                    itemset_length >= min_itemset_length
+                    and ((max_itemset_length is None) or (itemset_length <= max_itemset_length))
+                    and ((max_occurrences is None) or (occurrences <= max_occurrences))
+                    and (occurrences >= min_occurrences)
+                    and (min_support <= support <= max_support)
                 ):
                     result["itemset"].append(child_node.itemset_sorted_list)
-                    result["occurences"].append(child_node.occurences)
+                    result["occurrences"].append(child_node.occurrences)
                     result["support"].append(child_node.support)
                     result["itemset_length"].append(child_node.itemset_length)
 
@@ -122,15 +148,16 @@ class Database:
 
     def derive_rules(
         self,
-        minimum_confidence=0,
-        maximum_confidence=1,
-        minimum_lift=0,
-        maximum_lift=None,
-        minimum_support=0,
-        maximum_support=1,
-        minimum_occurences=0,
-        maximum_occurences=None,
-        maximum_antecedent_size=None,
+        min_confidence=0,
+        max_confidence=1,
+        confidence_tolerance=0,
+        min_lift=0,
+        max_lift=None,
+        min_support=0,
+        max_support=1,
+        min_occurrences=0,
+        max_occurrences=None,
+        max_antecedents_length=None,
     ):
         """
         Derive antecedents => consequents rules from the internal itemsets trie and return them as a dict object.
@@ -153,7 +180,7 @@ class Database:
             "consequents": [],
             "confidence": [],
             "lift": [],
-            "occurences": [],
+            "occurrences": [],
             "support": [],
             "antecedents_length": [],
         }
@@ -165,13 +192,12 @@ class Database:
             ] = manual_rule.confidence
 
         def any_preexisting_rule_with_antecedents_subset_and_same_confidence(
-            rules_temp, antecedents, consequents, confidence
+            rules_temp, antecedents, consequents, confidence, confidence_tolerance
         ):
-            new_itemset = consequents.union(antecedents)
             for rule_itemset, rule_confidence in rules_temp.items():
-                if (
-                    self.preprocessor.string_to_itemset_set(rule_itemset).issubset(new_itemset)
-                    and rule_confidence == confidence
+                if self.preprocessor.string_to_itemset_set(rule_itemset).issubset(consequents.union(antecedents)) and (
+                    (rule_confidence - confidence_tolerance <= confidence <= rule_confidence + confidence_tolerance)
+                    or (rule_confidence == 1)
                 ):
                     return True
             return False
@@ -181,9 +207,9 @@ class Database:
             for current_node in nodes:
                 # add the node as a new rule if certain conditions are met
 
-                # condition: antecedents size is lower or equal than the specified maximum_occurences
-                antecedents_length_condition_met = (maximum_antecedent_size is None) or (
-                    current_node_antecedent_size <= maximum_antecedent_size
+                # condition: antecedents size is lower or equal than the specified max_occurrences
+                antecedents_length_condition_met = (max_antecedents_length is None) or (
+                    current_node_antecedent_size <= max_antecedents_length
                 )
                 if antecedents_length_condition_met:
 
@@ -198,25 +224,31 @@ class Database:
 
                         # condition: minimum/maximum criteria from configuration are met
                         # rationale: filter defined by user
-                        current_node_occurences = current_node.occurences
+                        current_node_occurrences = current_node.occurrences
                         current_node_lift = current_node.lift
                         current_node_support = current_node.support
                         if (
-                            (minimum_confidence <= current_node_confidence <= maximum_confidence)
-                            and (minimum_support <= current_node_support <= maximum_support)
-                            and (current_node_lift >= minimum_lift)
-                            and ((maximum_lift is None) or (current_node_lift <= maximum_lift))
-                            and ((maximum_occurences is None) or (current_node_occurences <= maximum_occurences))
-                            and (current_node_occurences >= minimum_occurences)
+                            (min_confidence <= current_node_confidence <= max_confidence)
+                            and (min_support <= current_node_support <= max_support)
+                            and (current_node_lift >= min_lift)
+                            and ((max_lift is None) or (current_node_lift <= max_lift))
+                            and ((max_occurrences is None) or (current_node_occurrences <= max_occurrences))
+                            and (current_node_occurrences >= min_occurrences)
                         ):
                             antecedents = current_node.antecedents
                             consequents = current_node.consequents
 
                             # condition: there is no rule yet which predicts the same consequents with a subset of the
-                            #            current rule's antecedents and the same confidence PLUS there is no manual rule
-                            #            yet which matches antecedents and consequents
+                            #            current rule's antecedents and the same confidence (within tolerances)
+                            #            PLUS
+                            #            there is no manual rule yet which matches antecedents and consequents or
+                            #            overrules with confidence=1
                             if not any_preexisting_rule_with_antecedents_subset_and_same_confidence(
-                                rules_temp, set(antecedents), set(consequents), current_node_confidence
+                                rules_temp,
+                                set(antecedents),
+                                set(consequents),
+                                current_node_confidence,
+                                confidence_tolerance,
                             ):
                                 # add rule to result
                                 consequents, antecedents = current_node.consequents_antecedents
@@ -224,7 +256,7 @@ class Database:
                                 result["consequents"].append(consequents)
                                 result["confidence"].append(current_node_confidence)
                                 result["lift"].append(current_node_lift)
-                                result["occurences"].append(current_node_occurences)
+                                result["occurrences"].append(current_node_occurrences)
                                 result["support"].append(current_node_support)
                                 result["antecedents_length"].append(current_node_antecedent_size)
 
@@ -263,7 +295,7 @@ class Database:
         result = pd.DataFrame(self.derive_rules(*args, **kwargs))
         for list_column in ["consequents", "antecedents"]:
             result[list_column] = result[list_column].map(self.settings.item_separator_for_string_outputs.join)
-        result = result.sort_values(by=["confidence", "support"], ascending=[False, True])
+        # result = result.sort_values(by=["confidence", "support"], ascending=[False, True])
         return result
 
     def derive_rules_excel(self, filename, *args, **kwargs):

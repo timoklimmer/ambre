@@ -2,6 +2,7 @@
 
 import itertools
 
+
 class ItemsetsTrie:
     """
     A trie that stores information about the itemsets and corresponding subsets inserted into the database.
@@ -9,20 +10,42 @@ class ItemsetsTrie:
     Within the trie, consequents are always at the beginning of a path, with antecedents following. Consequents and
     antecedents are sorted along the path to avoid multiple paths for the same itemset. For performance reasons,
     there is no guarantee however that items are sorted among their siblings.
+
+    Notes: - intentionally using duplicate code here to facilitate a C-compiled version later.
+           - to replace itertools.combinations, check out
+             https://fishi.devtail.io/weblog/2015/05/18/common-bitwise-techniques-subset-iterations. Unfortunately,
+             its pure Python version is slower than itertools, hence need to wait for the C-compiled version to keep up
+             with itertools' speed.
     """
 
-    def __init__(self, normalized_consequents, item_separator_for_string_outputs):
+    def __init__(self, normalized_consequents, max_antecedents_length, item_separator_for_string_outputs):
         """Init."""
         self.root_node = ItemsetNode("", None, self, None)
         self.normalized_consequents = normalized_consequents
+        self.max_antecedents_length = max_antecedents_length
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
         self.number_transactions = 0
 
     def insert_normalized_transaction(self, normalized_transaction):
         """Insert the given normalized transaction."""
-        for subset_size in range(1, len(normalized_transaction) + 1):
-            for subset in itertools.combinations(normalized_transaction, subset_size):
-                self.insert_itemset(subset)
+        if not self.max_antecedents_length:
+            for subset_size in range(1, len(normalized_transaction) + 1):
+                for subset in itertools.combinations(normalized_transaction, subset_size):
+                    self.insert_itemset(subset)
+        else:
+            consequents, antecedents = [], []
+            for item in normalized_transaction:
+                if item in self.normalized_consequents:
+                    consequents.append(item)
+                else:
+                    antecedents.append(item)
+
+            for consequents_subset_size in range(0, len(consequents) + 1):
+                for consequent_subset in itertools.combinations(consequents, consequents_subset_size):
+                    for antecedents_subset_size in range(0, min(self.max_antecedents_length, len(antecedents)) + 1):
+                        for antecedents_subset in itertools.combinations(antecedents, antecedents_subset_size):
+                            self.insert_itemset(consequent_subset + antecedents_subset)
+
         self.number_transactions += 1
 
     def insert_itemset(self, itemset):
@@ -39,7 +62,7 @@ class ItemsetsTrie:
                 node.children[item] = new_node
                 node = new_node
             if is_last_item:
-                node.occurences += 1
+                node.occurrences += 1
 
     def get_itemset_node(self, itemset):
         """Get the itemset node from the trie which represents the specified itemset."""
@@ -92,7 +115,7 @@ class ItemsetNode:
         self.parent_node = parent_node
         self.itemsets_trie = itemsets_trie
         self.is_consequent = is_consequent
-        self.occurences = 0
+        self.occurrences = 0
 
     def __repr__(self):
         """More comfortable string representation of the object."""
@@ -152,7 +175,7 @@ class ItemsetNode:
     @property
     def support(self):
         """Return the itemset's relative support."""
-        return self.occurences / self.itemsets_trie.number_transactions
+        return self.occurrences / self.itemsets_trie.number_transactions
 
     @property
     def confidence(self):

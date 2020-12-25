@@ -98,7 +98,7 @@ def test_frequent_itemsets_wikipedia_consequent_bread_several_minmax_conditions(
 
     Conditions:
     - Consequent = "bread"
-    - Minimum occurences = 2
+    - Minimum occurrences = 2
     - Support >= 0.6
     - Itemset length >= 2
     """
@@ -110,7 +110,7 @@ def test_frequent_itemsets_wikipedia_consequent_bread_several_minmax_conditions(
     database.insert_transaction(["bread"])
 
     actual_result = database.derive_frequent_itemsets_pandas(
-        minimum_occurences=2, minimum_support=0.6, maximum_itemset_length=2
+        min_occurrences=2, min_support=0.6, max_itemset_length=2
     )
 
     save_actual_result(actual_result, request)

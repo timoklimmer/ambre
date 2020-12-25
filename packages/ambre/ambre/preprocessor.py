@@ -2,15 +2,15 @@
 
 import re
 
+
 class Preprocessor:
     """Preprocesses (mostly) incoming data."""
 
     def __init__(self, settings):
         """Init."""
         self.settings = settings
-        self.normalized_consequents = self.normalize_itemset(self.settings.consequents, sort_result=False)
-        self.normalized_consequents = self.sort_itemset_consequents_first(
-            self.normalized_consequents
+        self.normalized_consequents = sorted(
+            self.normalize_itemset(self.settings.consequents, sort_result=False)
         )  # need to normalize first before sorting due to dependency on normalized item values in sort function
 
     def normalize_itemset(self, itemset, sort_result=True):

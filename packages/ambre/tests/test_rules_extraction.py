@@ -46,7 +46,7 @@ def test_rule_extraction_wikipedia_consequent_bread_minmax_conditions(request):
     database.insert_transaction(["milk", "bread", "butter"])
     database.insert_transaction(["bread"])
 
-    actual_result = database.derive_rules_pandas(minimum_confidence=0.8, maximum_antecedent_size=4)
+    actual_result = database.derive_rules_pandas(min_confidence=0.8, max_antecedents_length=4)
     save_actual_result(actual_result, request)
 
     expected_result = load_expected_result(request)

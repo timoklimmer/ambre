@@ -50,18 +50,20 @@ class ItemsetsTrie:
 
     def insert_itemset(self, itemset):
         """Insert the given itemset into the trie."""
+        # note: this function is called very often. if changes are made ensure that the performance does not decrease
+        #       accidentially.
         node = self.root_node
-        items = len(itemset) - 1
-        for i, item in enumerate(itemset):
-            is_last_item = i == items
+        last_item_index = len(itemset) - 1
+        i = 0
+        for item in itemset:
             try:
                 node = node.children[item]
             except KeyError:
-                is_consequent = item in self.normalized_consequents
-                new_node = ItemsetNode(item, node, self, is_consequent)
+                new_node = ItemsetNode(item, node, self, item in self.normalized_consequents)
                 node.children[item] = new_node
                 node = new_node
-            if is_last_item:
+            i += 1
+            if i == last_item_index:
                 node.occurrences += 1
 
     def get_itemset_node(self, itemset):

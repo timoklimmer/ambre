@@ -74,7 +74,7 @@ def test_rule_extraction_titanic(request):
 def test_rule_extraction_titanic_max_antecedents_length(request):
     """Test the rule extraction on the Titanic dataset."""
     actual_result = (
-        get_titanic_survived_1_database(2)
+        get_titanic_survived_1_database(max_antecedents_length=2)
         .derive_rules_pandas(min_occurrences=30, min_confidence=0.7)
         .sort_values(by=["confidence", "occurrences"], ascending=[False, False])
     )

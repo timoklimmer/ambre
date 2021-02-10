@@ -2,10 +2,9 @@
 tqdm
 pandas
 openpyxl
-xlrd
 
-# temporary fix
-numpy==1.19.3
+# 1.19.4 has a bug
+numpy<=1.19.3,>=1.19.5
 
 # required for package development
 pytest
@@ -15,4 +14,3 @@ pylint
 pycodestyle
 pydocstyle
 ipykernel
-faker

@@ -1,6 +1,4 @@
-"""
-Test the frequent itemset features of the ambre package.
-"""
+"""Test the frequent itemset features of the ambre package."""
 
 from ambre import Database
 

@@ -44,15 +44,15 @@ def test_rule_extraction_throws_exception_without_consequent():
         database.derive_rules_pandas()
 
 
-def test_rule_extraction_wikipedia_manual_rule(request):
+def test_rule_extraction_wikipedia_common_sense_rule(request):
     """
     Test the rule generation against data and numbers from a Wikipedia article.
 
-    Condition: A manual rule is specified.
+    Condition: A common sense rule is specified.
     """
     database = get_wikipedia_database_consequent_bread()
-    database.insert_manual_rule(["milk"], ["bread"])
-    database.insert_manual_rule(["diapers"], ["beer"])
+    database.insert_common_sense_rule(["milk"], ["bread"])
+    database.insert_common_sense_rule(["diapers"], ["beer"])
 
     actual_result = database.derive_rules_pandas()
     save_and_ensure_actual_result_vs_expected(actual_result, request)

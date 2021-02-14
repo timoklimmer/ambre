@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from ambre.itemsets_trie import ItemsetsTrie
-from ambre.manual_rule import ManualRule
+from ambre.common_sense_rule import CommonSenseRule
 from ambre.preprocessor import Preprocessor
 from ambre.settings import Settings
 
@@ -36,7 +36,7 @@ class Database:
             self.settings.max_antecedents_length,
             self.settings.item_separator_for_string_outputs,
         )
-        self.manual_rules = []
+        self.common_sense_rules = []
 
     def insert_from_pandas_dataframe_rows(self, pandas_df, sampling_ratio=1, input_columns=None, show_progress=True):
         """Interpret each row in the given pandas dataframe as transaction and insert those."""
@@ -71,20 +71,20 @@ class Database:
         """Return the number of inserted transactions."""
         return self.itemsets_trie.number_transactions
 
-    def insert_manual_rule(self, antecedents, consequents, confidence=1):
+    def insert_common_sense_rule(self, antecedents, consequents, confidence=1):
         """
-        Insert a manual rule which is known already.
+        Insert a common sense rule which is known already.
 
-        Manual rules and rules that become redundant by the manual specified rule are not returned when rules are
-        derived. This helps concentrating on rules not known before.
+        Common sense rules and rules that become redundant by the specified common sense rules are not returned when
+        rules are derived. This helps concentrating on rules not known before.
         """
         antecedents = self.preprocessor.normalize_itemset(antecedents)
         consequents = self.preprocessor.normalize_itemset(consequents)
-        self.manual_rules.append(ManualRule(antecedents, consequents, confidence))
+        self.common_sense_rules.append(CommonSenseRule(antecedents, consequents, confidence))
 
-    def clear_manual_rules(self):
-        """Clear all manual rules."""
-        self.manual_rules = []
+    def clear_common_sense_rules(self):
+        """Clear all common sense rules."""
+        self.common_sense_rules = []
 
     def derive_frequent_itemsets(
         self,
@@ -186,10 +186,10 @@ class Database:
         }
 
         rules_temp = {}
-        for manual_rule in self.manual_rules:
+        for common_sense_rule in self.common_sense_rules:
             rules_temp[
-                self.preprocessor.itemset_to_string(manual_rule.consequents + manual_rule.antecedents)
-            ] = manual_rule.confidence
+                self.preprocessor.itemset_to_string(common_sense_rule.consequents + common_sense_rule.antecedents)
+            ] = common_sense_rule.confidence
 
         def any_preexisting_rule_with_antecedents_subset_and_same_confidence(
             rules_temp, antecedents, consequents, confidence, confidence_tolerance
@@ -241,7 +241,7 @@ class Database:
                             # condition: there is no rule yet which predicts the same consequents with a subset of the
                             #            current rule's antecedents and the same confidence (within tolerances)
                             #            PLUS
-                            #            there is no manual rule yet which matches antecedents and consequents or
+                            #            there is no common sense rule yet which matches antecedents and consequents or
                             #            overrules with confidence=1
                             if not any_preexisting_rule_with_antecedents_subset_and_same_confidence(
                                 rules_temp,

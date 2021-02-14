@@ -1,7 +1,7 @@
 # ambre
 
-ambre is a package for association mining-based rules extraction. Long story short: Give it your data, tell it what
-consequents you are interested in, and it will tell you under which circumstances these consequents occur.
+ambre is a package for association mining-based rules extraction. Long story short: **Give it your data, tell it what
+consequents you are interested in, and it will tell you under which circumstances these consequents occur.**
 
 The difference to traditional approaches is that it tells you more than just columns (or "factors"). It tells you which
 *combinations* of *concrete* values lead to your outcomes of interest most frequently.

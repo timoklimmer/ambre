@@ -2,11 +2,12 @@
 
 import random
 
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from ambre.itemsets_trie import ItemsetsTrie
 from ambre.common_sense_rule import CommonSenseRule
+from ambre.itemsets_trie import ItemsetsTrie
 from ambre.preprocessor import Preprocessor
 from ambre.settings import Settings
 
@@ -170,8 +171,8 @@ class Database:
         if not self.settings.consequents:
             raise ValueError(
                 (
-                    f"Cannot extract rules because no consequents are defined. To use this function, you need to pass "
-                    f"the consequent(s) of interest to the constructor when instantiating this class."
+                    "Cannot extract rules because no consequents are defined. To use this function, you need to pass "
+                    "the consequent(s) of interest to the constructor when instantiating this class."
                 )
             )
 
@@ -305,3 +306,28 @@ class Database:
         See derive_rules() for parameter descriptions.
         """
         self.derive_rules_pandas(*args, **kwargs).to_excel(filename, header=True, index=False)
+
+    @staticmethod
+    def merge_rules_pandas(ruleset_df_1, ruleset_df_2):
+        """
+        Merge two pandas dataframes containing rules into a single dataframe (to enable parallelization).
+
+        Note: Metrics for duplicate antecedents => consequents rules are aggregated into single rules by using a
+              weighted average function, with using the occurrences as weight.
+        """
+        concatenated_df = pd.concat([ruleset_df_1, ruleset_df_2], ignore_index=True)
+
+        def weighted_average(weight_column):
+            return lambda x: np.ma.average(x, weights=concatenated_df.loc[x.index, weight_column])
+
+        result = concatenated_df.groupby(["antecedents", "consequents"]).agg(
+            {
+                "confidence": weighted_average("occurrences"),
+                "lift": weighted_average("occurrences"),
+                "occurrences": "sum",
+                "support": weighted_average("occurrences"),
+                "antecedents_length": "first",
+            }
+        )
+        result.reset_index(level=result.index.name, inplace=True)
+        return result

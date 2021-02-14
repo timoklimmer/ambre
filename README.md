@@ -9,7 +9,7 @@ The difference to traditional approaches is that it tells you more than just col
 For instance, imagine you had to manage a production line. By using traditional approaches, you would learn eg. that
 your vendors or the machine models used are a critical factor for defects. In contrast, ambre will tell you that a
 defect occurs most likely when the vendor is *"ABC"* and when machine model *"XYZ"* is used. The information we get from
-ambre is more valuable than pure factors and can lead to more precise actions.
+ambre can be more valuable than pure factors and can lead to more precise actions.
 
 Besides, there is a feature to specify common sense knowledge. Let's assume you know already that machine model *XYZ*
 produces one defect after another. With the common sense feature, you can tell ambre, and it will not create boring and

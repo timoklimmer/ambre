@@ -32,7 +32,8 @@ from IPython.display import display
 from ambre import Database
 
 # load the famous titanic dataset and add the passengers that survived into our Database
-# note: data does not have to be a pandas dataframe. there is also methods to add non-columnar data.
+# note: data does not have to be a pandas dataframe. there is also methods to add non-columnar data with varying
+#       transaction sizes.
 database = Database(["Survived:1"], max_antecedents_length=3)
 database.insert_from_pandas_dataframe_rows(
     pd.read_csv("packages/ambre/tests/datasets/titanic.csv"),

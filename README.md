@@ -102,6 +102,13 @@ is generated.
 You are likely not interested in rules with low confidences anyway. So filtering them out will reduce data that needs to
 be processed and hence speed up things.
 
+Besides, it is always a good idea not to pass irrelevant data to ambre. You are probably not interested in data coming
+from technical fields such as "created_at", "is_deleted" etc. Removing/not passing such data will improve ambre's
+performance.
+
+In some cases you may also be able to group individual items to aggregated items. Aggregated items mean less items, and
+the less items you have, the faster is ambre because it needs to deal with less data then.
+
 
 ## Disclaimer
 As always - feel free to use but don't blame me if things go wrong.

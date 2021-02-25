@@ -1,7 +1,6 @@
 <p>
     <img src="logo/logo_small.png"/>
 </p>
-<br/>
 
 # ambre
 

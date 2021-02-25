@@ -1,4 +1,9 @@
-# <table style="border: none; border-color:#000000ff"><tr><td><img src="logo/logo_small.png"/><td>ambre</td></tr></table>
+<p>
+    <img src="logo/logo_small.png"/>
+</p>
+<br/>
+
+# ambre
 
 ambre is a package for association mining-based rules extraction. Long story short: **Give it your data, tell it what
 consequents you are interested in, and it will tell you under which circumstances these consequents occur.**

@@ -20,7 +20,15 @@ The ultimate goal of ambre is to deliver actionable insights. As detailed as nec
 
 ## Installation
 
-The package is not available on PyPI yet. To install, run `pip install -e .` in folder `packages/ambre`.
+The package is not available on PyPI yet but can be installed from GitHub.
+
+To install, either run
+
+`pip install --upgrade git+https://github.com/timoklimmer/ambre.git#subdirectory=packages/ambre`
+
+OR
+
+clone the repo and install the package by running `pip install -e .` in folder `packages/ambre`.
 
 
 ## Usage Example

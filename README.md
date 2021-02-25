@@ -20,7 +20,9 @@ The ultimate goal of ambre is to deliver actionable insights. As detailed as nec
 
 ## Installation
 
-The package is not available on PyPI yet but can be installed from GitHub.
+### pip
+
+The package is not available on PyPI yet but can be installed from GitHub via *pip*.
 
 To install, either run
 
@@ -29,6 +31,16 @@ To install, either run
 OR
 
 clone the repo and install the package by running `pip install -e .` in folder `packages/ambre`.
+
+You can also add the package to your `requirements.txt` file by adding a
+`git+https://github.com/timoklimmer/ambre.git#subdirectory=packages/ambre` line.
+
+### Azure Databricks
+If you are on Databricks, run
+
+`%pip install --upgrade git+https://github.com/timoklimmer/ambre.git#subdirectory=packages/ambre`
+
+within a cell for a quick install. For production-ready installation, install the package via your init script.
 
 
 ## Usage Example

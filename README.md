@@ -57,8 +57,8 @@ from IPython.display import display
 from ambre import Database
 
 # load the famous titanic dataset and add the passengers that survived into our Database
-# note: data does not have to be a pandas dataframe. there is also methods to add non-columnar data with varying
-#       transaction sizes.
+# note: - data does not have to be a pandas dataframe. there is also methods to add non-columnar data with varying
+#         transaction sizes such as insert_transactions().
 database = Database(["Survived:1"], max_antecedents_length=3)
 database.insert_from_pandas_dataframe_rows(
     pd.read_csv("packages/ambre/tests/datasets/titanic.csv"),
@@ -83,7 +83,7 @@ display(derived_rules)
 # survived. In that case, we can tell ambre about our common sense knowledge. When ambre knows about it, it will not
 # generate rules with knowledge we have already. Btw: we can add as many common sense rules as we like.
 print("Consider common sense knowledge...")
-database.insert_common_sense_rule(["parch:0"], ["survived:1"])
+database.insert_common_sense_rule(["Parch:0"], ["Survived:1"])
 derived_rules = database.derive_rules_pandas(min_occurrences=30, min_confidence=0.7)
 derived_rules = derived_rules.sort_values(by=["confidence", "occurrences"], ascending=[False, False])
 display(derived_rules)

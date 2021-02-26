@@ -4,20 +4,21 @@
 
 # ambre
 
-ambre is a package for association mining-based rules extraction. Long story short: **Give it your data, tell it what
-consequents you are interested in, and it will tell you under which circumstances these consequents occur.**
+> TL;DR -- **Give it your data and tell it what outcomes you are interested in. It will then tell you when those
+outcomes occur.**
 
-The difference to traditional approaches is that it tells you more than just columns (or "factors"). It tells you which
-*combinations* of *concrete* values lead to your outcomes of interest most frequently.
+ambre is a package for association mining-based rules extraction. The difference to traditional approaches is that it
+tells you more than just columns (or "factors"). It tells you which *combinations* of *concrete* values lead to your
+outcomes of interest most frequently.
 
 For instance, imagine you had to manage a production line. By using traditional approaches, you would learn eg. that
 your vendors or the machine models used are a critical factor for defects. In contrast, ambre will tell you that a
 defect occurs most likely when the vendor is *"ABC"* and when machine model *"XYZ"* is used. The information we get from
 ambre can be more valuable than pure factors and can lead to more precise actions.
 
-Besides, there is a feature to specify common sense knowledge. Let's assume you know already that machine model *XYZ*
-produces one defect after another. With the common sense feature, you can tell ambre, and it will not create boring and
-confusing rules for things you already know.
+To increase usability, there is also a feature to specify common sense knowledge. Let's assume you know already that
+machine model *XYZ* produces one defect after another. With the common sense feature, you can tell ambre, and it will
+not create boring and confusing rules for things you already know.
 
 The ultimate goal of ambre is to deliver actionable insights. As detailed as necessary but not more.
 

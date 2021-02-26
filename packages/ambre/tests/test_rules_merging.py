@@ -14,7 +14,7 @@ from .testing_helpers import (
 
 def test_rule_merge(request):
     """Test the rule merging on two rulesets derived from the Titanic dataset."""
-    database = Database(["Survived:1"])
+    database = Database(["Survived=1"])
     database.insert_from_pandas_dataframe_rows(
         load_pandas_dataframe_from_csv("datasets/titanic.csv"),
         input_columns=["Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"],

@@ -60,7 +60,7 @@ def test_rule_extraction_wikipedia_common_sense_rule(request):
 
 def test_rule_extraction_titanic(request):
     """Test the rule extraction on the Titanic dataset."""
-    database = Database(["Survived:1"])
+    database = Database(["Survived=1"])
     database.insert_from_pandas_dataframe_rows(
         load_pandas_dataframe_from_csv("datasets/titanic.csv"),
         input_columns=["Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"],

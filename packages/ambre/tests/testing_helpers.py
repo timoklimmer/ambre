@@ -93,8 +93,8 @@ def get_wikipedia_database_consequent_bread():
 
 
 def get_titanic_survived_1_database(max_antecedents_length=None):
-    """Return a database with transactions from the Titanic dataset, consequent = Survived:1."""
-    result = Database(["Survived:1"], max_antecedents_length=max_antecedents_length)
+    """Return a database with transactions from the Titanic dataset, consequent = Survived=1."""
+    result = Database(["Survived=1"], max_antecedents_length=max_antecedents_length)
     result.insert_from_pandas_dataframe_rows(
         load_pandas_dataframe_from_csv("datasets/titanic.csv"),
         input_columns=["Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"],

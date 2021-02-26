@@ -29,9 +29,9 @@ class Database:
         if not disable_string_consequent_warning and isinstance(consequents, str):
             warnings.warn(
                 (
-                    f"Parameter 'consequents' is a string, which means that each char in the string is treated as a "
-                    f"consequence. If you want to treat the entire string as consequent, you need to pass it within a "
-                    f"list. To disable this warning, set parameter 'disable_string_consequent_warning' to True."
+                    "Parameter 'consequents' is a string, which means that each char in the string is treated as a "
+                    "consequence. If you want to treat the entire string as consequent, you need to pass it within a "
+                    "list. To disable this warning, set parameter 'disable_string_consequent_warning' to True."
                 )
             )
         self.settings = Settings(

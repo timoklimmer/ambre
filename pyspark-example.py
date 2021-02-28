@@ -3,6 +3,7 @@
 # TODO: remove hardcoded values
 # TODO: allow all other param values as well
 
+from math import ceil
 
 from pyspark.sql import functions as F
 from pyspark.sql.types import DoubleType, LongType, StringType, StructField, StructType
@@ -12,19 +13,22 @@ from ambre import Database
 
 def derive_rules_from_spark_dataframe(spark_dataframe, sort_result=True):
     """Use ambre to derive rules from the given spark dataframe."""
+    consequents_of_interest = ["income=>50K"]
     max_antecedents_length = 2
-    min_occurences = 30
+    min_occurrences = 30
     min_confidence = 0.7
-    partition_by_column = "native-country"
+    target_batch_size = 100000
 
     def _derive_rules_by_group(group_df):
-        database = Database(["income=>50K"], max_antecedents_length=max_antecedents_length)
+        database = Database(consequents_of_interest, max_antecedents_length=max_antecedents_length)
         database.insert_from_pandas_dataframe_rows(group_df, show_progress=False)
-        return database.derive_rules_pandas(min_occurrences=min_occurences, min_confidence=min_confidence)
+        return database.derive_rules_pandas(min_occurrences=min_occurrences, min_confidence=min_confidence)
 
     # slice the dataframe into groups and derive rules for each group
-    # TODO: check if we can use a more generic column for better balance
-    group_by = spark_dataframe.groupBy(partition_by_column) if partition_by_column else spark_dataframe.groupBy()
+    number_of_groups = ceil(df.count() / target_batch_size)
+    group_by = spark_dataframe.groupBy(
+        ((F.rand() * number_of_groups) % number_of_groups).cast("bigint").alias("group_id")
+    )
     non_aggregated_rules = group_by.applyInPandas(
         _derive_rules_by_group,
         schema=StructType(
@@ -41,7 +45,7 @@ def derive_rules_from_spark_dataframe(spark_dataframe, sort_result=True):
     )
 
     # aggregate the rules so each rule occurs only once (only if we are partitioning)
-    if partition_by_column:
+    if number_of_groups > 1:
         aggregated_rules = non_aggregated_rules.groupBy("antecedents", "consequents").agg(
             (
                 F.sum(non_aggregated_rules.confidence * non_aggregated_rules.occurrences)

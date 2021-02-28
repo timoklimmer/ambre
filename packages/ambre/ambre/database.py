@@ -97,7 +97,7 @@ class Database:
         """Clear all common sense rules."""
         self.common_sense_rules = []
 
-    def derive_frequent_itemsets(
+    def derive_frequent_itemsets_dict(
         self,
         filter_to_consequent_itemsets_only=False,
         min_itemset_length=0,
@@ -143,9 +143,9 @@ class Database:
         """
         Derive frequent itemsets and return them as pandas dataframe.
 
-        See derive_frequent_itemsets() for parameter descriptions.
+        See derive_frequent_itemsets_dict() for parameter descriptions.
         """
-        result = pd.DataFrame(self.derive_frequent_itemsets(*args, **kwargs))
+        result = pd.DataFrame(self.derive_frequent_itemsets_dict(*args, **kwargs))
         result["itemset"] = result["itemset"].map(self.settings.item_separator_for_string_outputs.join)
         return result
 
@@ -153,11 +153,11 @@ class Database:
         """
         Derive frequent itemsets and save them in an Excel workbook.
 
-        See derive_frequent_itemsets() for parameter descriptions.
+        See derive_frequent_itemsets_dict() for parameter descriptions.
         """
         self.derive_frequent_itemsets_pandas(*args, **kwargs).to_excel(filename, header=True, index=False)
 
-    def derive_rules(
+    def derive_rules_dict(
         self,
         min_confidence=0,
         max_confidence=1,
@@ -301,9 +301,9 @@ class Database:
         """
         Derive association rules and return them as pandas dataframe.
 
-        See derive_rules() for parameter descriptions.
+        See derive_rules_dict() for parameter descriptions.
         """
-        result = pd.DataFrame(self.derive_rules(*args, **kwargs))
+        result = pd.DataFrame(self.derive_rules_dict(*args, **kwargs))
         for list_column in ["consequents", "antecedents"]:
             result[list_column] = result[list_column].map(self.settings.item_separator_for_string_outputs.join)
         # result = result.sort_values(by=["confidence", "support"], ascending=[False, True])
@@ -313,7 +313,7 @@ class Database:
         """
         Derive association rules and save them in an Excel workbook.
 
-        See derive_rules() for parameter descriptions.
+        See derive_rules_dict() for parameter descriptions.
         """
         self.derive_rules_pandas(*args, **kwargs).to_excel(filename, header=True, index=False)
 

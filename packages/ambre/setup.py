@@ -5,12 +5,12 @@ from setuptools import setup, find_packages
 setup(
     name="ambre",
     version="0.1",
-    description="A module to find out why things are how they are.",
-    url="",
-    author="",
+    description="An Association Mining-Based Rules Extraction engine. Find out why things are how they are.",
+    url="https://github.com/timoklimmer/ambre",
+    author="Timo Klimmer",
     author_email="",
     license="MIT",
     packages=find_packages(include=["ambre"]),
-    install_requires=["tqdm", "pandas"],
+    install_requires=["tqdm", "pandas", "pyspark"],
     zip_safe=False,
 )

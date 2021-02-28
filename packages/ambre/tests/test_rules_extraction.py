@@ -71,6 +71,19 @@ def test_rule_extraction_titanic(request):
     save_and_ensure_actual_result_vs_expected(actual_result, request)
 
 
+def test_rule_extraction_titanic_omit_column_names_in_result(request):
+    """Test the rule extraction on the Titanic dataset, omitting column names in the result."""
+    database = Database(["Survived=1"])
+    database.insert_from_pandas_dataframe_rows(
+        load_pandas_dataframe_from_csv("datasets/titanic.csv"),
+        input_columns=["Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"],
+    )
+    actual_result = database.derive_rules_pandas(
+        min_occurrences=30, min_confidence=0.7, omit_column_names_in_output=True
+    ).sort_values(by=["confidence", "occurrences"], ascending=[False, False])
+    save_and_ensure_actual_result_vs_expected(actual_result, request)
+
+
 def test_rule_extraction_titanic_max_antecedents_length(request):
     """Test the rule extraction on the Titanic dataset."""
     actual_result = (

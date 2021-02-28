@@ -23,6 +23,8 @@ class Database:
         case_insensitive=True,
         max_antecedents_length=None,
         item_separator_for_string_outputs=" ∪ ",
+        column_value_separator="=",
+        omit_column_names=False,
         disable_string_consequent_warning=False,
     ):
         """Init."""
@@ -40,6 +42,8 @@ class Database:
             case_insensitive,
             max_antecedents_length,
             item_separator_for_string_outputs,
+            column_value_separator,
+            omit_column_names,
         )
         self.preprocessor = Preprocessor(self.settings)
         self.itemsets_trie = ItemsetsTrie(
@@ -57,7 +61,17 @@ class Database:
             )
         columns = input_columns if input_columns else pandas_df.columns
         self.insert_transactions(
-            [[f"{column}={row[column]}" for column in columns] for _, row in pandas_df.iterrows()],
+            [
+                [
+                    (
+                        f"{row[column]}"
+                        if self.settings.omit_column_names
+                        else f"{column}{self.settings.column_value_separator}{row[column]}"
+                    )
+                    for column in columns
+                ]
+                for _, row in pandas_df.iterrows()
+            ],
             sampling_ratio,
             show_progress,
         )
@@ -97,7 +111,7 @@ class Database:
         """Clear all common sense rules."""
         self.common_sense_rules = []
 
-    def derive_frequent_itemsets_dict(
+    def derive_frequent_itemsets_columns_dict(
         self,
         filter_to_consequent_itemsets_only=False,
         min_itemset_length=0,
@@ -106,6 +120,7 @@ class Database:
         max_occurrences=None,
         min_support=0,
         max_support=1,
+        omit_column_names_in_output=False,
     ):
         """Derive the frequent itemsets from the internally assembled trie and return them as a dict object."""
 
@@ -127,7 +142,10 @@ class Database:
                     and (occurrences >= min_occurrences)
                     and (min_support <= support <= max_support)
                 ):
-                    result["itemset"].append(child_node.itemset_sorted_list)
+                    itemset = child_node.itemset_sorted_list
+                    if not self.settings.omit_column_names and omit_column_names_in_output:
+                        itemset = self.preprocessor.remove_column_names_from_itemset(itemset)
+                    result["itemset"].append(itemset)
                     result["occurrences"].append(child_node.occurrences)
                     result["support"].append(child_node.support)
                     result["itemset_length"].append(child_node.itemset_length)
@@ -143,9 +161,9 @@ class Database:
         """
         Derive frequent itemsets and return them as pandas dataframe.
 
-        See derive_frequent_itemsets_dict() for parameter descriptions.
+        See derive_frequent_itemsets_columns_dict() for parameter descriptions.
         """
-        result = pd.DataFrame(self.derive_frequent_itemsets_dict(*args, **kwargs))
+        result = pd.DataFrame(self.derive_frequent_itemsets_columns_dict(*args, **kwargs))
         result["itemset"] = result["itemset"].map(self.settings.item_separator_for_string_outputs.join)
         return result
 
@@ -153,11 +171,11 @@ class Database:
         """
         Derive frequent itemsets and save them in an Excel workbook.
 
-        See derive_frequent_itemsets_dict() for parameter descriptions.
+        See derive_frequent_itemsets_columns_dict() for parameter descriptions.
         """
         self.derive_frequent_itemsets_pandas(*args, **kwargs).to_excel(filename, header=True, index=False)
 
-    def derive_rules_dict(
+    def derive_rules_columns_dict(
         self,
         min_confidence=0,
         max_confidence=1,
@@ -169,6 +187,7 @@ class Database:
         min_occurrences=0,
         max_occurrences=None,
         max_antecedents_length=None,
+        omit_column_names_in_output=False,
     ):
         """
         Derive antecedents => consequents rules from the internal itemsets trie and return them as a dict object.
@@ -202,7 +221,7 @@ class Database:
                 self.preprocessor.itemset_to_string(common_sense_rule.consequents + common_sense_rule.antecedents)
             ] = common_sense_rule.confidence
 
-        def any_preexisting_rule_with_antecedents_subset_and_same_confidence(
+        def _any_preexisting_rule_with_antecedents_subset_and_same_confidence(
             rules_temp, antecedents, consequents, confidence, confidence_tolerance
         ):
             for rule_itemset, rule_confidence in rules_temp.items():
@@ -254,7 +273,7 @@ class Database:
                             #            PLUS
                             #            there is no common sense rule yet which matches antecedents and consequents or
                             #            overrules with confidence=1
-                            if not any_preexisting_rule_with_antecedents_subset_and_same_confidence(
+                            if not _any_preexisting_rule_with_antecedents_subset_and_same_confidence(
                                 rules_temp,
                                 set(antecedents),
                                 set(consequents),
@@ -263,8 +282,16 @@ class Database:
                             ):
                                 # add rule to result
                                 consequents, antecedents = current_node.consequents_antecedents
-                                result["antecedents"].append(antecedents)
-                                result["consequents"].append(consequents)
+                                consequents_to_append, antecedents_to_append = consequents, antecedents
+                                if not self.settings.omit_column_names and omit_column_names_in_output:
+                                    consequents_to_append = self.preprocessor.remove_column_names_from_itemset(
+                                        consequents_to_append
+                                    )
+                                    antecedents_to_append = self.preprocessor.remove_column_names_from_itemset(
+                                        antecedents_to_append
+                                    )
+                                result["antecedents"].append(antecedents_to_append)
+                                result["consequents"].append(consequents_to_append)
                                 result["confidence"].append(current_node_confidence)
                                 result["lift"].append(current_node_lift)
                                 result["occurrences"].append(current_node_occurrences)
@@ -301,9 +328,9 @@ class Database:
         """
         Derive association rules and return them as pandas dataframe.
 
-        See derive_rules_dict() for parameter descriptions.
+        See derive_rules_columns_dict() for parameter descriptions.
         """
-        result = pd.DataFrame(self.derive_rules_dict(*args, **kwargs))
+        result = pd.DataFrame(self.derive_rules_columns_dict(*args, **kwargs))
         for list_column in ["consequents", "antecedents"]:
             result[list_column] = result[list_column].map(self.settings.item_separator_for_string_outputs.join)
         # result = result.sort_values(by=["confidence", "support"], ascending=[False, True])
@@ -313,7 +340,7 @@ class Database:
         """
         Derive association rules and save them in an Excel workbook.
 
-        See derive_rules_dict() for parameter descriptions.
+        See derive_rules_columns_dict() for parameter descriptions.
         """
         self.derive_rules_pandas(*args, **kwargs).to_excel(filename, header=True, index=False)
 

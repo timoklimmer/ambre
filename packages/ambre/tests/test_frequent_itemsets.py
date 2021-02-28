@@ -80,3 +80,38 @@ def test_frequent_itemsets_titanic_no_consequents_min_occurences(request):
     )
     actual_result = database.derive_frequent_itemsets_pandas(min_occurrences=10).sort_values(by="itemset")
     save_and_ensure_actual_result_vs_expected(actual_result, request)
+
+
+def test_frequent_itemsets_titanic_custom_column_value_separator(request):
+    """Test the frequent itemset generation against the Titanic dataset with a custom column value separator."""
+    database = Database(column_value_separator=":")
+    database.insert_from_pandas_dataframe_rows(
+        load_pandas_dataframe_from_csv("datasets/titanic.csv"),
+        input_columns=["Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"],
+    )
+    actual_result = database.derive_frequent_itemsets_pandas(min_occurrences=10).sort_values(by="itemset")
+    save_and_ensure_actual_result_vs_expected(actual_result, request)
+
+
+def test_frequent_itemsets_titanic_omit_column_names_in_database(request):
+    """Test the frequent itemset generation against the Titanic dataset, omitting column names in the database."""
+    database = Database(omit_column_names=True)
+    database.insert_from_pandas_dataframe_rows(
+        load_pandas_dataframe_from_csv("datasets/titanic.csv"),
+        input_columns=["Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"],
+    )
+    actual_result = database.derive_frequent_itemsets_pandas(min_occurrences=10).sort_values(by="itemset")
+    save_and_ensure_actual_result_vs_expected(actual_result, request)
+
+
+def test_frequent_itemsets_titanic_omit_column_names_in_result(request):
+    """Test the frequent itemset generation against the Titanic dataset, omitting column names in the result."""
+    database = Database()
+    database.insert_from_pandas_dataframe_rows(
+        load_pandas_dataframe_from_csv("datasets/titanic.csv"),
+        input_columns=["Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"],
+    )
+    actual_result = database.derive_frequent_itemsets_pandas(
+        min_occurrences=10, omit_column_names_in_output=True
+    ).sort_values(by="itemset")
+    save_and_ensure_actual_result_vs_expected(actual_result, request)

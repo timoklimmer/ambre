@@ -55,3 +55,7 @@ class Preprocessor:
     def string_to_itemset_set(self, string):
         """Convert the given string to a set of items."""
         return set(string.split(self.settings.item_separator_for_string_outputs))
+
+    def remove_column_names_from_itemset(self, itemset):
+        """Remove column names from items in itemset."""
+        return [re.sub(f"^.+?{re.escape(self.settings.column_value_separator)}", "", item) for item in itemset]

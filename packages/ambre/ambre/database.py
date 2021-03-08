@@ -1,11 +1,9 @@
 """Defines the Database class."""
 
-import random
 import warnings
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 
 from ambre.common_sense_rule import CommonSenseRule
 from ambre.itemsets_trie import ItemsetsTrie

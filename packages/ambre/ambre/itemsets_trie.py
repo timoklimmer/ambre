@@ -1,6 +1,9 @@
 """Everything related to tries."""
 
 import itertools
+import random
+
+from tqdm import tqdm
 
 
 class ItemsetsTrie:
@@ -11,11 +14,7 @@ class ItemsetsTrie:
     antecedents are sorted along the path to avoid multiple paths for the same itemset. For performance reasons,
     there is no guarantee however that items are sorted among their siblings.
 
-    Notes: - intentionally using duplicate code here to facilitate a C-compiled version later.
-           - to replace itertools.combinations, check out
-             https://fishi.devtail.io/weblog/2015/05/18/common-bitwise-techniques-subset-iterations. Unfortunately,
-             its pure Python version is slower than itertools, hence need to wait for the C-compiled version to keep up
-             with itertools' speed.
+    Note: Intentionally using duplicate code here to facilitate a port to Rust later.
     """
 
     def __init__(self, normalized_consequents, max_antecedents_length, item_separator_for_string_outputs):
@@ -25,6 +24,13 @@ class ItemsetsTrie:
         self.max_antecedents_length = max_antecedents_length
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
         self.number_transactions = 0
+
+    def insert_normalized_transactions(self, normalized_transactions, sampling_ratio=1, show_progress=True):
+        """Insert the given normalized transactions."""
+        transaction_iterator = tqdm(normalized_transactions) if show_progress else normalized_transactions
+        for transaction in transaction_iterator:
+            if sampling_ratio == 1 or (random.random() < sampling_ratio):
+                self.insert_normalized_transaction(transaction)
 
     def insert_normalized_transaction(self, normalized_transaction):
         """Insert the given normalized transaction."""
@@ -108,7 +114,8 @@ class ItemsetsTrie:
 class ItemsetNode:
     """An itemset within an itemset trie."""
 
-    # note: some properties are intentionally not using singleton patterns to save memory
+    # note: some properties are intentionally not using singleton patterns to save memory and to enable online updates
+    #       without the need to clear caches
 
     def __init__(self, item, parent_node, itemsets_trie, is_consequent):
         """Init."""

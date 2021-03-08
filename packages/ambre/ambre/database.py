@@ -82,14 +82,17 @@ class Database:
             raise ValueError(
                 f"Parameter 'sampling_ratio' needs to be between 0 and 1. Specified value is: {sampling_ratio}."
             )
-        transaction_iterator = tqdm(transactions) if show_progress else transactions
-        for transaction in transaction_iterator:
-            if sampling_ratio == 1 or (random.random() < sampling_ratio):
-                self.insert_transaction(transaction)
+        self.itemsets_trie.insert_normalized_transactions(
+            [self.preprocessor.normalize_itemset(transaction) for transaction in transactions],
+            sampling_ratio=sampling_ratio,
+            show_progress=show_progress,
+        )
 
-    def insert_transaction(self, transaction):
+    def insert_transaction(self, transaction, is_normalized=False):
         """Insert the given transaction."""
-        self.itemsets_trie.insert_normalized_transaction(self.preprocessor.normalize_itemset(transaction))
+        self.itemsets_trie.insert_normalized_transaction(
+            transaction if is_normalized else self.preprocessor.normalize_itemset(transaction)
+        )
 
     @property
     def number_transactions(self):

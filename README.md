@@ -4,18 +4,21 @@
 
 # ambre
 
-> TL;DR -- **Give ambre your data and tell it what outcomes you are interested in. It will then tell you when those
-outcomes occur.**
+> TL;DR -- **Give ambre your data and tell it what outcomes you are interested in. It then tells you when those outcomes
+occur.**
 
-ambre is a package for association mining-based rules extraction -- which means it extracts rules from your data in the
-form of *factors (named "antecedents")* --lead to--> *outcomes (named "consequents")*. In contrast to other approaches
-like deriving feature importances, it tells you more than just columns. It tells you exactly which *combinations* of
+ambre is a package for association mining-based rules extraction -- it extracts rules from your data in the form of
+*factors (named "antecedents")* --lead to--> *outcomes (named "consequents")*. In contrast to other approaches like
+deriving feature importances, it tells you more than just columns. It tells you exactly which *combinations* of
 *concrete* values lead to your outcomes of interest most frequently and at which confidence.
 
 For instance, imagine you had to manage a production line. By using traditional approaches, you would learn eg. that
 your vendors or the machine models used are a critical factor for defects. In contrast, ambre will tell you that a
 defect occurs most likely when the vendor is *"ABC"* and when machine model *"XYZ"* is used. Because it's more detailed,
-the information we get from ambre can be more precise than pure factors.
+the information we get from ambre can be more valuable than pure importance of factors.
+
+ambre can even work with non-columnar data. It's no problem if the "transactions" (see below) consist of a different
+number of items.
 
 To increase usability, there is also a feature to specify common sense knowledge. Let's assume you know already that
 machine model *XYZ* produces one defect after another. With the common sense feature, you can tell ambre, and it will

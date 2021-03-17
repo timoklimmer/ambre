@@ -4,17 +4,18 @@
 
 # ambre
 
-> TL;DR -- **Give it your data and tell it what outcomes you are interested in. It will then tell you when those
+> TL;DR -- **Give ambre your data and tell it what outcomes you are interested in. It will then tell you when those
 outcomes occur.**
 
-ambre is a package for association mining-based rules extraction. The difference to traditional approaches is that it
-tells you more than just columns (or "factors"). It tells you which *combinations* of *concrete* values lead to your
-outcomes of interest most frequently.
+ambre is a package for association mining-based rules extraction -- which means it extracts rules from your data in the
+form of *factors (named "antecedents")* --lead to--> *outcomes (named "consequents")*. In contrast to other approaches
+like deriving feature importances, it tells you more than just columns. It tells you exactly which *combinations* of
+*concrete* values lead to your outcomes of interest most frequently and at which confidence.
 
 For instance, imagine you had to manage a production line. By using traditional approaches, you would learn eg. that
 your vendors or the machine models used are a critical factor for defects. In contrast, ambre will tell you that a
-defect occurs most likely when the vendor is *"ABC"* and when machine model *"XYZ"* is used. The information we get from
-ambre can be more valuable than pure factors and can lead to more precise actions.
+defect occurs most likely when the vendor is *"ABC"* and when machine model *"XYZ"* is used. Because it's more detailed,
+the information we get from ambre can be more precise than pure factors.
 
 To increase usability, there is also a feature to specify common sense knowledge. Let's assume you know already that
 machine model *XYZ* produces one defect after another. With the common sense feature, you can tell ambre, and it will
@@ -50,6 +51,7 @@ within a cell for a quick install. For production-ready installation, install th
 
 ## Usage Example
 
+### Plain Python
 ```python
 import pandas as pd
 from IPython.display import display
@@ -89,6 +91,8 @@ derived_rules = derived_rules.sort_values(by=["confidence", "occurrences"], asce
 display(derived_rules)
 ```
 
+### pyspark
+There is also an initial [example for pyspark](pyspark-example.py) which runs in Spark 3+.
 
 ## Glossary
 |Term|Meaning|

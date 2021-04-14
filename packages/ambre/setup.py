@@ -11,6 +11,6 @@ setup(
     author_email="",
     license="MIT",
     packages=find_packages(include=["ambre"]),
-    install_requires=["tqdm", "pandas", "pyspark"],
+    install_requires=["tqdm", "pandas"],
     zip_safe=False,
 )

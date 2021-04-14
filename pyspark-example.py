@@ -2,6 +2,7 @@
 
 # TODO: remove hardcoded values
 # TODO: allow all other param values as well
+# TODO: avoid/optimize/accelerate grouping prior to work distribution.
 
 from math import ceil
 
@@ -25,7 +26,7 @@ def derive_rules_from_spark_dataframe(spark_dataframe, sort_result=True):
         return database.derive_rules_pandas(min_occurrences=min_occurrences, min_confidence=min_confidence)
 
     # slice the dataframe into groups and derive rules for each group
-    number_of_groups = ceil(df.count() / target_batch_size)
+    number_of_groups = ceil(spark_dataframe.count() / target_batch_size)
     group_by = spark_dataframe.groupBy(
         ((F.rand() * number_of_groups) % number_of_groups).cast("bigint").alias("group_id")
     )

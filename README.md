@@ -17,8 +17,8 @@ your vendors or the machine models used are a critical factor for defects. In co
 defect occurs most likely when the vendor is *"ABC"* and when machine model *"XYZ"* is used. Because it's more detailed,
 the information we get from ambre can be more valuable than pure importance of factors.
 
-ambre can even work with non-columnar data. It's no problem if the "transactions" (see below) consist of a different
-number of items.
+ambre can even work with non-columnar data. It's no problem if the "transactions" (see below) consist of different
+numbers of items.
 
 To increase usability, there is also a feature to specify common sense knowledge. Let's assume you know already that
 machine model *XYZ* produces one defect after another. With the common sense feature, you can tell ambre, and it will

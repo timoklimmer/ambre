@@ -2,9 +2,7 @@
 tqdm
 pandas
 openpyxl
-
-# 1.19.4 has a bug
-numpy<=1.19.3,>=1.19.5
+numpy
 
 # required for package development
 pytest

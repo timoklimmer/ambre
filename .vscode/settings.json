@@ -1,7 +1,7 @@
 {
     "files.trimTrailingWhitespace": true,
     "python.formatting.provider": "black",
-    "python.pythonPath": "C:\\Users\\tklimmer\\AppData\\Local\\Continuum\\miniconda3\\envs\\ambre\\python.exe",
+    "python.pythonPath": "C:\\Users\\${env:USERNAME}\\Miniconda3\\envs\\ambre\\python.exe",
     "outline.showArrays": false,
     "outline.showBooleans": false,
     "outline.showEnumMembers": false,

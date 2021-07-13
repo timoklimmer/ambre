@@ -11,4 +11,3 @@ black
 pylint
 pycodestyle
 pydocstyle
-ipykernel

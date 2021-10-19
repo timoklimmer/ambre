@@ -1,9 +1,11 @@
 """Defines the Database class."""
 
+import random
 import warnings
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from ambre.common_sense_rule import CommonSenseRule
 from ambre.itemsets_trie import ItemsetsTrie
@@ -80,16 +82,15 @@ class Database:
             raise ValueError(
                 f"Parameter 'sampling_ratio' needs to be between 0 and 1. Specified value is: {sampling_ratio}."
             )
-        self.itemsets_trie.insert_normalized_transactions(
-            [self.preprocessor.normalize_itemset(transaction) for transaction in transactions],
-            sampling_ratio=sampling_ratio,
-            show_progress=show_progress,
-        )
+        transaction_iterator = tqdm(transactions) if show_progress else transactions
+        for transaction in transaction_iterator:
+            if sampling_ratio == 1 or (random.random() < sampling_ratio):
+                self.insert_transaction(transaction)
 
-    def insert_transaction(self, transaction, is_normalized=False):
+    def insert_transaction(self, transaction):
         """Insert the given transaction."""
-        self.itemsets_trie.insert_normalized_transaction(
-            transaction if is_normalized else self.preprocessor.normalize_itemset(transaction)
+        self.itemsets_trie.insert_normalized_consequents_antecedents_tuple(
+            self.preprocessor.extract_normalized_consequents_antecedents(transaction)
         )
 
     @property

@@ -29,6 +29,12 @@ class Preprocessor:
         consequents, antecedents = self.extract_consequents_antecedents(itemset, sort_result=True)
         return consequents + antecedents
 
+    def extract_normalized_consequents_antecedents(self, itemset):
+        """Extract normalized consequents and antecedents from the given itemset."""
+        return self.extract_consequents_antecedents(
+            self.normalize_itemset(itemset, sort_result=False), sort_result=True
+        )
+
     def extract_consequents_antecedents(self, itemset, sort_result=True):
         """Extract consequents and antecedents from the given itemset."""
         result_consequents, result_antecedents = [], []

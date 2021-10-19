@@ -1,9 +1,7 @@
 """Everything related to tries."""
 
-import itertools
-import random
-
-from tqdm import tqdm
+import sys
+from itertools import chain, combinations
 
 
 class ItemsetsTrie:
@@ -25,39 +23,25 @@ class ItemsetsTrie:
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
         self.number_transactions = 0
 
-    def insert_normalized_transactions(self, normalized_transactions, sampling_ratio=1, show_progress=True):
-        """Insert the given normalized transactions."""
-        transaction_iterator = tqdm(normalized_transactions) if show_progress else normalized_transactions
-        for transaction in transaction_iterator:
-            if sampling_ratio == 1 or (random.random() < sampling_ratio):
-                self.insert_normalized_transaction(transaction)
-
-    def insert_normalized_transaction(self, normalized_transaction):
+    def insert_normalized_consequents_antecedents_tuple(self, normalized_consequents_antecedents_tuple):
         """Insert the given normalized transaction."""
+        consequents, antecedents = (
+            normalized_consequents_antecedents_tuple[0],
+            normalized_consequents_antecedents_tuple[1],
+        )
         if not self.max_antecedents_length:
-            for subset_size in range(1, len(normalized_transaction) + 1):
-                for subset in itertools.combinations(normalized_transaction, subset_size):
-                    self.insert_itemset(subset)
+            for itemset in ItemsetsTrie._powerset(consequents + antecedents):
+                self.insert_subset(itemset)
         else:
-            consequents, antecedents = [], []
-            for item in normalized_transaction:
-                if item in self.normalized_consequents:
-                    consequents.append(item)
-                else:
-                    antecedents.append(item)
-
-            for consequents_subset_size in range(0, len(consequents) + 1):
-                for consequent_subset in itertools.combinations(consequents, consequents_subset_size):
-                    for antecedents_subset_size in range(0, min(self.max_antecedents_length, len(antecedents)) + 1):
-                        for antecedents_subset in itertools.combinations(antecedents, antecedents_subset_size):
-                            self.insert_itemset(consequent_subset + antecedents_subset)
-
+            for consequent_subset in ItemsetsTrie._powerset(consequents):
+                for antecedent_subset in ItemsetsTrie._powerset(antecedents, self.max_antecedents_length):
+                    self.insert_subset(consequent_subset + antecedent_subset)
         self.number_transactions += 1
 
-    def insert_itemset(self, itemset):
-        """Insert the given itemset into the trie."""
+    def insert_subset(self, itemset):
+        """Insert the given subset into the trie."""
         # note: this function is called very often. if changes are made ensure that the performance does not decrease
-        # #       accidentially.
+        #       accidentially.
         node = self.root_node
         items = len(itemset) - 1
         for i, item in enumerate(itemset):
@@ -109,6 +93,14 @@ class ItemsetsTrie:
 
         _recursive_trie_walkdown_breadth_first(self.get_consequent_root_nodes())
         return result
+
+    @staticmethod
+    def _powerset(iterable, max_subset_length=sys.maxsize):
+        """Return the powerset of the items in the given iterable."""
+        items = list(iterable)
+        return chain.from_iterable(
+            combinations(items, subset_length) for subset_length in range(min(max_subset_length, len(items)) + 1)
+        )
 
 
 class ItemsetNode:

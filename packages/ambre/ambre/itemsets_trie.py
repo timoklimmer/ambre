@@ -38,13 +38,13 @@ class ItemsetsTrie:
                     self.insert_subset(consequent_subset + antecedent_subset)
         self.number_transactions += 1
 
-    def insert_subset(self, itemset):
+    def insert_subset(self, subset):
         """Insert the given subset into the trie."""
         # note: this function is called very often. if changes are made ensure that the performance does not decrease
         #       accidentially.
         node = self.root_node
-        items = len(itemset) - 1
-        for i, item in enumerate(itemset):
+        items = len(subset) - 1
+        for i, item in enumerate(subset):
             is_last_item = i == items
             try:
                 node = node.children[item]

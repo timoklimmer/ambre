@@ -1,5 +1,7 @@
 """Everything related to tries."""
 
+from recordclass import dataobject
+
 
 class ItemsetsTrie:
     """
@@ -83,11 +85,11 @@ class ItemsetsTrie:
         return result
 
 
-class ItemsetNode:
+class ItemsetNode(dataobject):
     """An itemset within an itemset trie."""
 
-    # note: some properties are intentionally not using singleton patterns to save memory and to enable online updates
-    #       without the need to clear caches
+    __fields__ = "item", "children", "parent_node", "itemsets_trie", "is_consequent", "occurrences"
+    __options__ = {"fast_new": True}
 
     def __init__(self, item, parent_node, itemsets_trie, is_consequent):
         """Init."""

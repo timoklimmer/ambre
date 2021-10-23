@@ -3,6 +3,7 @@ tqdm
 pandas
 openpyxl
 numpy
+recordclass
 
 # required for package development
 pytest

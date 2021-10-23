@@ -89,8 +89,8 @@ class Database:
 
     def insert_transaction(self, transaction):
         """Insert the given transaction."""
-        self.itemsets_trie.insert_normalized_consequents_antecedents_tuple(
-            self.preprocessor.extract_normalized_consequents_antecedents(transaction)
+        self.itemsets_trie.insert_normalized_consequents_antecedents(
+            *self.preprocessor.extract_normalized_consequents_antecedents(transaction)
         )
 
     @property

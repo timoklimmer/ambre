@@ -1,8 +1,5 @@
 """Everything related to tries."""
 
-import sys
-from itertools import chain, combinations
-
 
 class ItemsetsTrie:
     """
@@ -23,38 +20,29 @@ class ItemsetsTrie:
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
         self.number_transactions = 0
 
-    def insert_normalized_consequents_antecedents_tuple(self, normalized_consequents_antecedents_tuple):
-        """Insert the given normalized transaction."""
-        consequents, antecedents = (
-            normalized_consequents_antecedents_tuple[0],
-            normalized_consequents_antecedents_tuple[1],
-        )
-        if not self.max_antecedents_length:
-            for itemset in ItemsetsTrie._powerset(consequents + antecedents):
-                self.insert_subset(itemset)
-        else:
-            for consequent_subset in ItemsetsTrie._powerset(consequents):
-                for antecedent_subset in ItemsetsTrie._powerset(antecedents, self.max_antecedents_length):
-                    self.insert_subset(consequent_subset + antecedent_subset)
-        self.number_transactions += 1
+    def insert_normalized_consequents_antecedents(self, consequents, antecedents):
+        """Insert the given normalized transaction to the trie."""
+        itemset_plus_meta = [(consequent, True) for consequent in consequents] + [
+            (antecedent, False) for antecedent in antecedents
+        ]
 
-    def insert_subset(self, subset):
-        """Insert the given subset into the trie."""
-        # note: this function is called very often. if changes are made ensure that the performance does not decrease
-        #       accidentially.
-        node = self.root_node
-        items = len(subset) - 1
-        for i, item in enumerate(subset):
-            is_last_item = i == items
-            try:
-                node = node.children[item]
-            except KeyError:
-                is_consequent = item in self.normalized_consequents
-                new_node = ItemsetNode(item, node, self, is_consequent)
-                node.children[item] = new_node
-                node = new_node
-            if is_last_item:
-                node.occurrences += 1
+        def _add_itemset_powerset_recursive(self, node, start_index, antecedents_count):
+            index = 0
+            for item_plus_meta in itemset_plus_meta[start_index:]:
+                child_node = node.get_or_create_child(*item_plus_meta)
+                child_node.occurrences += 1
+                new_antecedents_count = antecedents_count + (child_node.is_consequent is False)
+                if (not self.max_antecedents_length) or (new_antecedents_count < self.max_antecedents_length):
+                    _add_itemset_powerset_recursive(
+                        self,
+                        child_node,
+                        start_index + index + 1,
+                        new_antecedents_count,
+                    )
+                index += 1
+
+        _add_itemset_powerset_recursive(self, self.root_node, 0, 0)
+        self.number_transactions += 1
 
     def get_itemset_node(self, itemset):
         """Get the itemset node from the trie which represents the specified itemset."""
@@ -94,14 +82,6 @@ class ItemsetsTrie:
         _recursive_trie_walkdown_breadth_first(self.get_consequent_root_nodes())
         return result
 
-    @staticmethod
-    def _powerset(iterable, max_subset_length=sys.maxsize):
-        """Return the powerset of the items in the given iterable."""
-        items = list(iterable)
-        return chain.from_iterable(
-            combinations(items, subset_length) for subset_length in range(min(max_subset_length, len(items)) + 1)
-        )
-
 
 class ItemsetNode:
     """An itemset within an itemset trie."""
@@ -121,6 +101,16 @@ class ItemsetNode:
     def __repr__(self):
         """More comfortable string representation of the object."""
         return self.itemsets_trie.item_separator_for_string_outputs.join(self.itemset_sorted_list)
+
+    def get_or_create_child(self, item, is_consequent):
+        """Get or create a child node."""
+        try:
+            child_node = self.children[item]
+        except KeyError:
+            new_child_node = ItemsetNode(item, self, self.itemsets_trie, is_consequent)
+            self.children[item] = new_child_node
+            child_node = new_child_node
+        return child_node
 
     @property
     def itemset_unsorted_set(self):

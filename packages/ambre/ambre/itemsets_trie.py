@@ -1,5 +1,7 @@
 """Everything related to tries."""
 
+from collections import deque
+
 from recordclass import dataobject
 
 
@@ -24,26 +26,49 @@ class ItemsetsTrie:
 
     def insert_normalized_consequents_antecedents(self, consequents, antecedents):
         """Insert the given normalized transaction to the trie."""
+        # basic approach: for each node, add all items that follow that node in the itemset as children.
+        #                 an itemset of size n leads to 2**n-1 nodes.
         itemset_plus_meta = [(consequent, True) for consequent in consequents] + [
             (antecedent, False) for antecedent in antecedents
         ]
+        # more complex code without recursion
+        stack = deque([(self.root_node, 0, 0)])  # node, start_index, antecedents_count
+        stack_height = 1
 
-        def _add_itemset_powerset_recursive(self, node, start_index, antecedents_count):
+        def _update_child_item(item_plus_meta):
+            nonlocal stack_height, index
+            child_node = node.get_or_create_child(*item_plus_meta)
+            child_node.occurrences += 1
+            new_antecedents_count = antecedents_count + (child_node.is_consequent is False)
+            if (not self.max_antecedents_length) or (new_antecedents_count < self.max_antecedents_length):
+                stack.append((child_node, start_index + index + 1, new_antecedents_count))
+                stack_height += 1
+            index += 1
+
+        while stack_height > 0:
+            node, start_index, antecedents_count = stack.popleft()
+            stack_height -= 1
             index = 0
-            for item_plus_meta in itemset_plus_meta[start_index:]:
-                child_node = node.get_or_create_child(*item_plus_meta)
-                child_node.occurrences += 1
-                new_antecedents_count = antecedents_count + (child_node.is_consequent is False)
-                if (not self.max_antecedents_length) or (new_antecedents_count < self.max_antecedents_length):
-                    _add_itemset_powerset_recursive(
-                        self,
-                        child_node,
-                        start_index + index + 1,
-                        new_antecedents_count,
-                    )
-                index += 1
+            deque(map(_update_child_item, itemset_plus_meta[start_index:]), maxlen=0)
 
-        _add_itemset_powerset_recursive(self, self.root_node, 0, 0)
+        # # easier to understand code but limited by Python recursion limit
+        # def _add_itemset_powerset_recursive(self, node, start_index, antecedents_count):
+        #     index = 0
+        #     for item_plus_meta in itemset_plus_meta[start_index:]:
+        #         child_node = node.get_or_create_child(*item_plus_meta)
+        #         child_node.occurrences += 1
+        #         new_antecedents_count = antecedents_count + (child_node.is_consequent is False)
+        #         if (not self.max_antecedents_length) or (new_antecedents_count < self.max_antecedents_length):
+        #             _add_itemset_powerset_recursive(
+        #                 self,
+        #                 child_node,
+        #                 start_index + index + 1,
+        #                 new_antecedents_count,
+        #             )
+        #         index += 1
+
+        # _add_itemset_powerset_recursive(self, self.root_node, 0, 0)
+
         self.number_transactions += 1
 
     def get_itemset_node(self, itemset):

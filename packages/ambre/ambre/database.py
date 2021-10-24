@@ -2,6 +2,7 @@
 
 import random
 import warnings
+from collections import deque
 
 import numpy as np
 import pandas as pd
@@ -83,9 +84,21 @@ class Database:
                 f"Parameter 'sampling_ratio' needs to be between 0 and 1. Specified value is: {sampling_ratio}."
             )
         transaction_iterator = tqdm(transactions) if show_progress else transactions
-        for transaction in transaction_iterator:
-            if sampling_ratio == 1 or (random.random() < sampling_ratio):
-                self.insert_transaction(transaction)
+        if sampling_ratio == 1:
+            deque([self.insert_transaction(transaction) for transaction in transaction_iterator], maxlen=0)
+        else:
+            deque(
+                [
+                    self.insert_transaction(transaction)
+                    for transaction in transaction_iterator
+                    if (random.random() < sampling_ratio)
+                ],
+                maxlen=0,
+            )
+
+        # for transaction in transaction_iterator:
+        #     if sampling_ratio == 1 or (random.random() < sampling_ratio):
+        #         self.insert_transaction(transaction)
 
     def insert_transaction(self, transaction):
         """Insert the given transaction."""
@@ -227,10 +240,10 @@ class Database:
             rules_temp, antecedents, consequents, confidence, confidence_tolerance
         ):
             for rule_itemset, rule_confidence in rules_temp.items():
-                if self.preprocessor.string_to_itemset_set(rule_itemset).issubset(consequents.union(antecedents)) and (
+                if (
                     (rule_confidence - confidence_tolerance <= confidence <= rule_confidence + confidence_tolerance)
                     or (rule_confidence == 1)
-                ):
+                ) and self.preprocessor.string_to_itemset_set(rule_itemset).issubset(consequents.union(antecedents)):
                     return True
             return False
 

@@ -28,30 +28,29 @@ class ItemsetsTrie:
         """Insert the given normalized transaction to the trie."""
         # basic approach: for each node, add all items that follow that node in the itemset as children.
         #                 an itemset of size n leads to 2**n-1 nodes.
+
         itemset_plus_meta = [(consequent, True) for consequent in consequents] + [
             (antecedent, False) for antecedent in antecedents
         ]
-        # more complex code without recursion
-        stack = deque([(self.root_node, 0, 0)])  # node, start_index, antecedents_count
-        stack_height = 1
 
-        def _update_child_item(item_plus_meta):
-            nonlocal stack_height, index
+        # option 1: more complex code without recursion
+        stack = deque([(self.root_node, 0, 0)])  # node, start_index, antecedents_count
+
+        def _create_or_update_child_node(item_plus_meta):
+            nonlocal stack, index
             child_node = node.get_or_create_child(*item_plus_meta)
             child_node.occurrences += 1
             new_antecedents_count = antecedents_count + (child_node.is_consequent is False)
             if (not self.max_antecedents_length) or (new_antecedents_count < self.max_antecedents_length):
                 stack.append((child_node, start_index + index + 1, new_antecedents_count))
-                stack_height += 1
             index += 1
 
-        while stack_height > 0:
+        while len(stack) > 0:
             node, start_index, antecedents_count = stack.popleft()
-            stack_height -= 1
             index = 0
-            deque(map(_update_child_item, itemset_plus_meta[start_index:]), maxlen=0)
+            deque(map(_create_or_update_child_node, itemset_plus_meta[start_index:]), maxlen=0)
 
-        # # easier to understand code but limited by Python recursion limit
+        # # option 2: easier to understand code but limited by Python recursion limit
         # def _add_itemset_powerset_recursive(self, node, start_index, antecedents_count):
         #     index = 0
         #     for item_plus_meta in itemset_plus_meta[start_index:]:
@@ -131,9 +130,8 @@ class ItemsetNode(dataobject):
 
     def get_or_create_child(self, item, is_consequent):
         """Get or create a child node."""
-        try:
-            child_node = self.children[item]
-        except KeyError:
+        child_node = self.children.get(item, None)
+        if child_node is None:
             new_child_node = ItemsetNode(item, self, self.itemsets_trie, is_consequent)
             self.children[item] = new_child_node
             child_node = new_child_node

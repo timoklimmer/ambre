@@ -11,6 +11,6 @@ setup(
     author_email="",
     license="MIT",
     packages=find_packages(include=["ambre"]),
-    install_requires=["tqdm", "pandas"],
+    install_requires=["tqdm", "pandas", "recordclass"],
     zip_safe=False,
 )

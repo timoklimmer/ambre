@@ -136,12 +136,16 @@ class Database:
         min_support=0,
         max_support=1,
         omit_column_names_in_output=False,
+        show_progress_bar=False,
     ):
         """Derive the frequent itemsets from the internally assembled trie and return them as a dict object."""
 
         def _recursive_trie_walkdown_depth_first(node, level_number):
             result = {"itemset": [], "occurrences": [], "support": [], "itemset_length": []}
-            for child_item in self.preprocessor.sort_itemset_consequents_first(node.children.keys()):
+            sorted_itemset = self.preprocessor.sort_itemset_consequents_first(node.children.keys())
+            if show_progress_bar and level_number == 0:
+                sorted_itemset = tqdm(sorted_itemset)
+            for child_item in sorted_itemset:
                 child_node = node.children[child_item]
                 if level_number == 0 and filter_to_consequent_itemsets_only and not child_node.consequents:
                     # if we reach here, we have passed all consequents (because consequents are iterated first)
@@ -203,6 +207,7 @@ class Database:
         max_occurrences=None,
         max_antecedents_length=None,
         omit_column_names_in_output=False,
+        show_progress_bar=False,
     ):
         """
         Derive antecedents => consequents rules from the internal itemsets trie and return them as a dict object.
@@ -247,8 +252,12 @@ class Database:
                     return True
             return False
 
-        def _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(nodes, current_node_antecedent_size):
+        def _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(
+            nodes, current_node_antecedent_size, recursion_level
+        ):
             next_nodes = []
+            if show_progress_bar and recursion_level == 0:
+                nodes = tqdm(nodes)
             for current_node in nodes:
                 # add the node as a new rule if certain conditions are met
 
@@ -328,12 +337,12 @@ class Database:
 
             if next_nodes:
                 _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(
-                    next_nodes, current_node_antecedent_size + 1
+                    next_nodes, current_node_antecedent_size + 1, recursion_level + 1
                 )
 
         # use a recursive function to compile the result, starting at the first antecedent nodes in the itemset trie
         _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(
-            self.itemsets_trie.get_first_antecedent_after_consequents_nodes(), 1
+            self.itemsets_trie.get_first_antecedent_after_consequents_nodes(), 1, 0
         )
 
         # return result

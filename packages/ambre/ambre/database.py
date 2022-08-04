@@ -194,6 +194,14 @@ class Database:
         """
         self.derive_frequent_itemsets_pandas(*args, **kwargs).to_excel(filename, header=True, index=False)
 
+    def derive_frequent_itemsets_csv(self, filename, *args, **kwargs):
+        """
+        Derive frequent itemsets and save them in a CSV file.
+
+        See derive_frequent_itemsets_columns_dict() for parameter descriptions.
+        """
+        self.derive_frequent_itemsets_pandas(*args, **kwargs).to_csv(filename, header=True, index=False)
+
     def derive_rules_columns_dict(
         self,
         min_confidence=0,
@@ -367,6 +375,14 @@ class Database:
         See derive_rules_columns_dict() for parameter descriptions.
         """
         self.derive_rules_pandas(*args, **kwargs).to_excel(filename, header=True, index=False)
+
+    def derive_rules_csv(self, filename, *args, **kwargs):
+        """
+        Derive association rules and save them in a CSV file.
+
+        See derive_rules_columns_dict() for parameter descriptions.
+        """
+        self.derive_rules_pandas(*args, **kwargs).to_csv(filename, header=True, index=False)
 
     @staticmethod
     def merge_rules_pandas(ruleset_df_1, ruleset_df_2):

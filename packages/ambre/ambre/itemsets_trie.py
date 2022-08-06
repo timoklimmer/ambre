@@ -133,7 +133,7 @@ class ItemsetNode(dataobject):
 
     def __init__(self, item, parent_node, itemsets_trie, is_consequent, children, occurrences):
         """
-        Constructor.
+        Init.
 
         Parameter 'children' should be a dict with items as keys and values as nodes.
         """

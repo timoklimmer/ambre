@@ -74,7 +74,7 @@ frequent_itemsets = database.derive_frequent_itemsets_pandas()
 display(frequent_itemsets)
 
 # query rules
-rules = database.derive_rules_pandas()
+rules = database.derive_rules_pandas(non_antecedents_rules=True)
 display(rules)
 ```
 
@@ -145,6 +145,9 @@ and it seems there is no workaround or smarter method yet.
 
 The good news is that ambre's performance is highly dependent on its configuration. To improve ambre's performance, you
 can set a couple of parameters when creating the database and when using the *derive_...()* methods.
+
+Whenever possible, you should prefer to set the parameters at the database, because this will help filter data as early
+as possible, avoiding unnecessary workload in the derive..() methods.
 
 - `max_antecedents_length` controls how many antecedents you are returned at maximum when frequent itemsets or rules are
 generated. In most of the cases, you are only interested in maybe 3 or 5 antecedents anyway because results with more

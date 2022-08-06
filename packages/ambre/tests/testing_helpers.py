@@ -92,6 +92,21 @@ def get_wikipedia_database_consequent_bread():
     return result
 
 
+def get_wikipedia_database_consequent_bread_and_milk():
+    """
+    Return a database populated with transactions from Wikipedia, using bread and milk as consequents.
+
+    See https://en.wikipedia.org/wiki/Association_rule_learning for details.
+    """
+    result = Database(["bread", "milk"])
+    result.insert_transaction(["milk", "bread"])
+    result.insert_transaction(["butter"])
+    result.insert_transaction(["beer", "diapers"])
+    result.insert_transaction(["milk", "bread", "butter"])
+    result.insert_transaction(["bread"])
+    return result
+
+
 def get_titanic_survived_1_database(max_antecedents_length=None):
     """Return a database with transactions from the Titanic dataset, consequent = Survived=1."""
     result = Database(["Survived=1"], max_antecedents_length=max_antecedents_length)

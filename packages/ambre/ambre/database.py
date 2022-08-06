@@ -214,6 +214,7 @@ class Database:
         min_occurrences=0,
         max_occurrences=None,
         max_antecedents_length=None,
+        non_antecedents_rules=False,
         omit_column_names_in_output=False,
         show_progress_bar=False,
     ):
@@ -269,7 +270,7 @@ class Database:
             for current_node in nodes:
                 # add the node as a new rule if certain conditions are met
 
-                # condition: antecedents size is lower or equal than the specified max_occurrences
+                # condition: antecedents size is lower or equal than the specified max_antecedents_length
                 antecedents_length_condition_met = (max_antecedents_length is None) or (
                     current_node_antecedent_size <= max_antecedents_length
                 )
@@ -277,7 +278,7 @@ class Database:
 
                     # condition: itemset has a different confidence than its parent or parent is consequent
                     # rationale: an itemset with the same confidence as its parent does not add value, first antecedent
-                    #            nodes have no parents with confidence.
+                    #            nodes should be considered in any case
                     current_node_confidence = current_node.confidence
                     if (
                         current_node.parent_node.is_consequent
@@ -347,6 +348,29 @@ class Database:
                 _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(
                     next_nodes, current_node_antecedent_size + 1, recursion_level + 1
                 )
+
+        # add the non-antecedent consequences to the result
+        if non_antecedents_rules:
+            for consequent_node in self.itemsets_trie.get_all_consequent_nodes():
+                confidence = consequent_node.confidence
+                lift = consequent_node.lift
+                occurrences = consequent_node.occurrences
+                support = consequent_node.support
+                if (
+                    (min_confidence <= confidence <= max_confidence)
+                    and (min_support <= support <= max_support)
+                    and (lift >= min_lift)
+                    and ((max_lift is None) or (lift <= max_lift))
+                    and ((max_occurrences is None) or (occurrences <= max_occurrences))
+                    and (occurrences >= min_occurrences)
+                ):
+                    result["antecedents"].append("")
+                    result["consequents"].append(consequent_node.itemset_sorted_list)
+                    result["confidence"].append(consequent_node.confidence)
+                    result["lift"].append(consequent_node.lift)
+                    result["occurrences"].append(consequent_node.occurrences)
+                    result["support"].append(consequent_node.support)
+                    result["antecedents_length"].append(0)
 
         # use a recursive function to compile the result, starting at the first antecedent nodes in the itemset trie
         _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(

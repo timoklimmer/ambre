@@ -91,6 +91,22 @@ class ItemsetsTrie:
         """Return all children from the root node that are a consequent."""
         return [node for node in list(self.root_node.children.values()) if node.is_consequent]
 
+    def get_all_consequent_nodes(self):
+        """Return all consequent nodes."""
+        result = []
+
+        def _recursive_trie_walkdown_breadth_first(nodes):
+            next_nodes = []
+            for current_node in nodes:
+                if current_node.is_consequent:
+                    result.append(current_node)
+                    next_nodes.extend(list(current_node.children.values()))
+            if next_nodes:
+                _recursive_trie_walkdown_breadth_first(next_nodes)
+
+        _recursive_trie_walkdown_breadth_first(self.get_consequent_root_nodes())
+        return result
+
     def get_first_antecedent_after_consequents_nodes(self):
         """Return all nodes which are the first antecedent after the consequent nodes."""
         result = []
@@ -196,13 +212,19 @@ class ItemsetNode(dataobject):
     @property
     def confidence(self):
         """Return the itemset's confidence."""
-        return self.support / self.itemsets_trie.get_itemset_node(self.antecedents).support
+        #return self.support / self.itemsets_trie.get_itemset_node(self.antecedents).support
+        antecedents = self.antecedents
+        if self.antecedents:
+            return self.support / self.itemsets_trie.get_itemset_node(antecedents).support
+        return 1
 
     @property
     def lift(self):
         """Return the itemset's confidence."""
         consequents, antecedents = self.consequents_antecedents
-        return self.support / (
-            self.itemsets_trie.get_itemset_node(antecedents).support
-            * self.itemsets_trie.get_itemset_node(consequents).support
-        )
+        if self.antecedents:
+            return self.support / (
+                self.itemsets_trie.get_itemset_node(antecedents).support
+                * self.itemsets_trie.get_itemset_node(consequents).support
+            )
+        return 1

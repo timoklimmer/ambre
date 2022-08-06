@@ -170,8 +170,8 @@ class Database:
                     result["itemset_length"].append(child_node.itemset_length)
 
                 result_from_recursion = _recursive_trie_walkdown_depth_first(child_node, level_number + 1)
-                for column in result_from_recursion:
-                    result[column].extend(result_from_recursion[column])
+                for column, column_value in result_from_recursion.items():
+                    result[column].extend(column_value)
             return result
 
         return _recursive_trie_walkdown_depth_first(self.itemsets_trie.root_node, 0)

@@ -10,6 +10,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from io import BytesIO
 
 from ambre.common_sense_rule import CommonSenseRule
 from ambre.itemsets_trie import ItemsetsTrie
@@ -138,11 +139,22 @@ class Database:
         with open(filepath, "wb") as target_file:
             joblib.dump(self, target_file, compress="lz4")
 
+    def as_bytes(self):
+        """Return a byte array representing the database."""
+        with BytesIO() as byte_buffer:
+            joblib.dump(self, byte_buffer, compress="lz4")
+            return byte_buffer.getvalue()
+
     @staticmethod
     def load_from_file(filepath) -> Database:
         """Load the database from the specified file."""
         with open(filepath, "rb") as source_file:
             return joblib.load(source_file)
+
+    @staticmethod
+    def load_from_bytes(bytes_array) -> Database:
+        """Load the database from the specified bytes."""
+        return joblib.load(BytesIO(bytes_array))
 
     def derive_frequent_itemsets_columns_dict(
         self,

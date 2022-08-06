@@ -4,18 +4,18 @@
 
 # ambre
 
-> TL;DR -- **Give ambre your data and tell it what outcomes you are interested in. It then tells you when those outcomes
-occur.**
+> TL;DR -- **Give ambre your data and tell it what outcomes in your data you are interested in. It then tells you when
+those outcomes occur.**
 
 ambre is a package for association mining-based rules extraction -- it extracts rules from your data in the form of
 *factors (named "antecedents")* --lead to--> *outcomes (named "consequents")*. In contrast to other approaches like
 deriving feature importances, it tells you more than just columns. It tells you exactly which *combinations* of
 *concrete* values lead to your outcomes of interest most frequently and at which confidence.
 
-For instance, imagine you had to manage a production line. By using traditional approaches, you would learn eg. that
-your vendors or the machine models used are a critical factor for defects. In contrast, ambre will tell you that a
-defect occurs most likely when the vendor is *"ABC"* and when machine model *"XYZ"* is used. Because it's more detailed,
-the information we get from ambre can be more valuable than pure importance of factors.
+For instance, imagine you had to manage a production line. By using traditional approaches, you would learn for example
+that your vendors or the used machine models are a critical factor for defects. In contrast, ambre will tell you that a
+defect occurs most likely when the vendor is *"ABC"*, and when machine model *"XYZ"* is used. Because it's more
+detailed, the information we get from ambre can be more valuable than pure importance of factors.
 
 ambre can even work with non-columnar data. It's no problem if the "transactions" (see below) consist of different
 numbers of items.
@@ -54,7 +54,31 @@ within a cell for a quick install. For production-ready installation, install th
 
 ## Usage Example
 
-### Plain Python
+### Plain Python - Non-Tabular Data
+```python
+from IPython.display import display
+
+from ambre import Database
+
+# populate database
+# using "bread" as consequence -> under which conditions do people buy bread?
+database = Database(["bread"])
+database.insert_transaction(["milk", "bread"])
+database.insert_transaction(["butter"])
+database.insert_transaction(["beer", "diapers"])
+database.insert_transaction(["milk", "bread", "butter"])
+database.insert_transaction(["bread"])
+
+# query frequent itemsets
+frequent_itemsets = database.derive_frequent_itemsets_pandas()
+display(frequent_itemsets)
+
+# query rules
+rules = database.derive_rules_pandas()
+display(rules)
+```
+
+### Plain Python - Tabular Data
 ```python
 import pandas as pd
 from IPython.display import display
@@ -95,7 +119,9 @@ display(derived_rules)
 ```
 
 ### pyspark
-There is also an initial [example for pyspark](pyspark-example.py) which runs in Spark 3+.
+There is also an initial [example for pyspark](pyspark-example.py) which runs in Spark 3+. The Spark example is more
+scalable than the non-Spark one but might be inaccurate when partitions are not properly distributed. ambre's Spark
+support may be improved in future, so stay tuned.
 
 ## Glossary
 |Term|Meaning|

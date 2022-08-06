@@ -18,7 +18,7 @@ class ItemsetsTrie:
 
     def __init__(self, normalized_consequents, max_antecedents_length, item_separator_for_string_outputs):
         """Init."""
-        self.root_node = ItemsetNode("", None, self, None)
+        self.root_node = ItemsetNode("", None, self, None, {}, 0)
         self.normalized_consequents = normalized_consequents
         self.max_antecedents_length = max_antecedents_length
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
@@ -128,17 +128,21 @@ class ItemsetsTrie:
 class ItemsetNode(dataobject):
     """An itemset within an itemset trie."""
 
-    __fields__ = "item", "children", "parent_node", "itemsets_trie", "is_consequent", "occurrences"
+    __fields__ = "item", "parent_node", "itemsets_trie", "is_consequent", "children", "occurrences"
     __options__ = {"fast_new": True}
 
-    def __init__(self, item, parent_node, itemsets_trie, is_consequent):
-        """Init."""
+    def __init__(self, item, parent_node, itemsets_trie, is_consequent, children, occurrences):
+        """
+        Constructor.
+
+        Parameter 'children' should be a dict with items as keys and values as nodes.
+        """
         self.item = item
-        self.children = {}  # keys are items, values are nodes
+        self.children = children
         self.parent_node = parent_node
         self.itemsets_trie = itemsets_trie
         self.is_consequent = is_consequent
-        self.occurrences = 0
+        self.occurrences = occurrences
 
     def __repr__(self):
         """More comfortable string representation of the object."""
@@ -148,7 +152,7 @@ class ItemsetNode(dataobject):
         """Get or create a child node."""
         child_node = self.children.get(item, None)
         if child_node is None:
-            new_child_node = ItemsetNode(item, self, self.itemsets_trie, is_consequent)
+            new_child_node = ItemsetNode(item, self, self.itemsets_trie, is_consequent, {}, 0)
             self.children[item] = new_child_node
             child_node = new_child_node
         return child_node

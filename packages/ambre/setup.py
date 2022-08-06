@@ -11,6 +11,6 @@ setup(
     author_email="",
     license="MIT",
     packages=find_packages(include=["ambre"]),
-    install_requires=["tqdm", "pandas", "openpyxl", "numpy", "recordclass"],
+    install_requires=["tqdm", "pandas", "openpyxl", "numpy", "recordclass", "joblib", "lz4"],
     zip_safe=False,
 )

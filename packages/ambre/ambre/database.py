@@ -1,9 +1,12 @@
 """Defines the Database class."""
 
+from __future__ import annotations
+
 import random
 import warnings
 from collections import deque
 
+import joblib
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -122,9 +125,24 @@ class Database:
         consequents = self.preprocessor.normalize_itemset(consequents)
         self.common_sense_rules.append(CommonSenseRule(antecedents, consequents, confidence))
 
+    def get_common_sense_rules(self):
+        """Return the common sense rules."""
+        return self.common_sense_rules
+
     def clear_common_sense_rules(self):
         """Clear all common sense rules."""
         self.common_sense_rules = []
+
+    def save_to_file(self, filepath):
+        """Save the database into the given file."""
+        with open(filepath, "wb") as target_file:
+            joblib.dump(self, target_file, compress="lz4")
+
+    @staticmethod
+    def load_from_file(filepath) -> Database:
+        """Load the database from the specified file."""
+        with open(filepath, "rb") as source_file:
+            return joblib.load(source_file)
 
     def derive_frequent_itemsets_columns_dict(
         self,

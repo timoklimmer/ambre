@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import copy
 import random
+import sys
 import warnings
 from collections import deque
 from io import BytesIO
@@ -119,16 +121,30 @@ class Database:
         """Return the number of inserted transactions."""
         return self.itemsets_trie.number_transactions
 
-    def insert_common_sense_rule(self, antecedents, consequents, confidence=1):
+    @property
+    def number_nodes(self):
+        """Return the number of nodes in the underlying itemset trie."""
+        return self.itemsets_trie.number_nodes
+
+    def insert_common_sense_rules(self, common_sense_rules):
         """
-        Insert a common sense rule which is known already.
+        Insert a batch of common sense rules.
 
         Common sense rules and rules that become redundant by the specified common sense rules are not returned when
         rules are derived. This helps concentrating on rules not known before.
         """
-        antecedents = self.preprocessor.normalize_itemset(antecedents)
-        consequents = self.preprocessor.normalize_itemset(consequents)
-        self.common_sense_rules.append(CommonSenseRule(antecedents, consequents, confidence))
+        for common_sense_rule in common_sense_rules:
+            common_sense_rule.database = self
+        self.common_sense_rules = sorted(list(set((item for item in self.common_sense_rules + common_sense_rules))))
+
+    def insert_common_sense_rule(self, antecedents, consequents, confidence=1):
+        """
+        Insert a common sense rule.
+
+        Common sense rules and rules that become redundant by the specified common sense rules are not returned when
+        rules are derived. This helps concentrating on rules not known before.
+        """
+        self.insert_common_sense_rules([CommonSenseRule(antecedents, consequents, confidence, self)])
 
     def get_common_sense_rules(self):
         """Return the common sense rules."""
@@ -146,6 +162,8 @@ class Database:
                     "metadata": {
                         "AMBRE_PACKAGE_VERSION": AMBRE_PACKAGE_VERSION,
                         "AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION": AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION,
+                        "PYTHON_VERSION": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+                        "PYTHON_VERSION_LONG": f"{sys.version}",
                     },
                     "database": self,
                 },
@@ -164,9 +182,7 @@ class Database:
         """Load the database from the specified bytes."""
         loaded_data_structure = joblib.load(BytesIO(bytes_array))
         package_version_from_file = loaded_data_structure["metadata"]["AMBRE_PACKAGE_VERSION"]
-        database_schema_version_from_file = loaded_data_structure["metadata"][
-            "AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION"
-        ]
+        database_schema_version_from_file = loaded_data_structure["metadata"]["AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION"]
         if database_schema_version_from_file != AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION:
             raise Exception(
                 (
@@ -471,14 +487,81 @@ class Database:
         """
         self.derive_rules_pandas(*args, **kwargs).to_csv(filename, header=True, index=False)
 
+    def copy(self):
+        """Return a copy of the database."""
+        return copy.deepcopy(self)
+
     @staticmethod
-    def merge_databases(database1, database2) -> Database:
-        """Merge the given databases into a single database."""
-        raise NotImplementedError()
-        # TODO: check if databases are compatible
-        # TODO: check which database is larger and select the smaller database to be merged into the bigger database
-        # TODO: do the merge
-        # TODO: return the result
+    def merge_databases(database1: Database, database2: Database, inplace=True) -> Database:
+        """
+        Merge the given databases into a single database and return the result.
+
+        Note: For performance/memory reasons, the merge operation is by default performed "in-place", means: the smaller
+              of the given databases is merged into the larger one, and the larger one is returned. Thereby, the larger
+              database will be modified. If for whatever reason, input databases need to be kept as is, set the inplace
+              parameter to FALSE. However, since this requires a copy of the larger target database, performance might
+              be negatively impacted.
+        """
+
+        raise Exception("Not implemented yet.")
+
+        # -- ensure that database schema versions are supported
+        if (
+            database1.DATABASE_SCHEMA_VERSION != AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION
+            or database2.DATABASE_SCHEMA_VERSION != AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION
+        ):
+            raise Exception(
+                (
+                    f"Cannot merge databases because database schema versions are incompatible. Ensure that you only "
+                    f"merge databases that use data schema versions supported by this package. With the installed "
+                    f"version of the ambre package ('{AMBRE_PACKAGE_VERSION}'), you can only merge databases with "
+                    f"database schema version '{AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION}'."
+                )
+            )
+
+        # -- ensure that the settings of both databases are equal
+        if database1.settings != database2.settings:
+            raise Exception(
+                (
+                    "Cannot merge databases because they use different settings. Ensure that both databases "
+                    "use the same settings."
+                )
+            )
+
+        # -- identify source and target database by selecting the larger database as target
+        if database1.number_nodes >= database2.number_nodes:
+            target_database = database1
+            source_database = database2
+        else:
+            source_database = database2
+            target_database = database1
+
+        # -- get a copy of the target database if inplace is False
+        if not inplace:
+            target_database = target_database.copy()
+
+        # udpate package version in target database
+        target_database.AMBRE_PACKAGE_VERSION = AMBRE_PACKAGE_VERSION
+
+        # -- merge the smaller source database into the bigger target database
+        # update number of transactions
+        target_database.itemsets_trie.number_transactions += source_database.itemsets_trie.number_transactions
+
+        # do NOT update number of nodes
+        # note: - this will be done automatically by itemsets_trie.get_or_create_child()
+        #       - simply summing the number of nodes of both databases would be wrong because some nodes exist in both
+        #         databases
+
+        # merge nodes by walking breadth first down the nodes of the source trie and add whatever is missing in the
+        # target trie
+        # TODO: complete
+        # TODO: also update occurrences
+
+        # adopt common sense rules
+        target_database.insert_common_sense_rules(source_database.get_common_sense_rules())
+
+        # return the result
+        return target_database
 
     @staticmethod
     def merge_rules_pandas(ruleset_df_1, ruleset_df_2):

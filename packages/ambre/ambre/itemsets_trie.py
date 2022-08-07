@@ -23,6 +23,7 @@ class ItemsetsTrie:
         self.max_antecedents_length = max_antecedents_length
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
         self.number_transactions = 0
+        self.number_nodes = 1
 
     def insert_normalized_consequents_antecedents(self, consequents, antecedents):
         """Insert the given normalized transaction to the trie."""
@@ -137,12 +138,12 @@ class ItemsetNode(dataobject):
 
         Parameter 'children' should be a dict with items as keys and values as nodes.
         """
-        self.item = item
-        self.children = children
-        self.parent_node = parent_node
-        self.itemsets_trie = itemsets_trie
-        self.is_consequent = is_consequent
-        self.occurrences = occurrences
+        self.item :str = item
+        self.children : dict = children
+        self.parent_node : ItemsetNode = parent_node
+        self.itemsets_trie : ItemsetsTrie = itemsets_trie
+        self.is_consequent : bool = is_consequent
+        self.occurrences : int = occurrences
 
     def __repr__(self):
         """More comfortable string representation of the object."""
@@ -153,6 +154,7 @@ class ItemsetNode(dataobject):
         child_node = self.children.get(item, None)
         if child_node is None:
             new_child_node = ItemsetNode(item, self, self.itemsets_trie, is_consequent, {}, 0)
+            self.itemsets_trie.number_nodes += 1
             self.children[item] = new_child_node
             child_node = new_child_node
         return child_node

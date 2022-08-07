@@ -16,11 +16,14 @@ from ambre.common_sense_rule import CommonSenseRule
 from ambre.itemsets_trie import ItemsetsTrie
 from ambre.preprocessor import Preprocessor
 from ambre.settings import Settings
-from ambre.versions import AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION, AMBRE_PACKAGE_VERSION
+from ambre.versions import AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION, AMBRE_PACKAGE_VERSION
 
 
 class Database:
     """Transaction database for mining association rules."""
+
+    AMBRE_PACKAGE_VERSION = AMBRE_PACKAGE_VERSION
+    DATABASE_SCHEMA_VERSION = AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION
 
     def __init__(
         self,
@@ -142,7 +145,7 @@ class Database:
                 {
                     "metadata": {
                         "AMBRE_PACKAGE_VERSION": AMBRE_PACKAGE_VERSION,
-                        "AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION": AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION,
+                        "AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION": AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION,
                     },
                     "database": self,
                 },
@@ -161,19 +164,24 @@ class Database:
         """Load the database from the specified bytes."""
         loaded_data_structure = joblib.load(BytesIO(bytes_array))
         package_version_from_file = loaded_data_structure["metadata"]["AMBRE_PACKAGE_VERSION"]
-        internal_database_schema_version_from_file = loaded_data_structure["metadata"]["AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION"]
-        if internal_database_schema_version_from_file != AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION:
+        database_schema_version_from_file = loaded_data_structure["metadata"][
+            "AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION"
+        ]
+        if database_schema_version_from_file != AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION:
             raise Exception(
                 (
                     f"Cannot load database due to incompatible database schema versions. The currently installed ambre "
-                    f"package version '{AMBRE_PACKAGE_VERSION}' expects internal database schema version "
-                    f"'{AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION}', but your database uses database schema "
-                    f"version '{internal_database_schema_version_from_file}', created by ambre version "
+                    f"package version '{AMBRE_PACKAGE_VERSION}' expects database schema version "
+                    f"'{AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION}', but your database uses database schema "
+                    f"version '{database_schema_version_from_file}', created by ambre version "
                     f"'{package_version_from_file}'. Ensure that you are saving and loading databases with compatible "
                     f"versions."
                 )
             )
-        return loaded_data_structure["database"]
+        database: Database = loaded_data_structure["database"]
+        database.ambre_package_version = package_version_from_file
+        database.database_schema_version = database_schema_version_from_file
+        return database
 
     @staticmethod
     def load_from_file(filepath) -> Database:
@@ -466,11 +474,11 @@ class Database:
     @staticmethod
     def merge_databases(database1, database2) -> Database:
         """Merge the given databases into a single database."""
+        raise NotImplementedError()
         # TODO: check if databases are compatible
         # TODO: check which database is larger and select the smaller database to be merged into the bigger database
         # TODO: do the merge
         # TODO: return the result
-        pass
 
     @staticmethod
     def merge_rules_pandas(ruleset_df_1, ruleset_df_2):

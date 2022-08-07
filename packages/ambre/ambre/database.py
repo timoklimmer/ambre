@@ -5,17 +5,18 @@ from __future__ import annotations
 import random
 import warnings
 from collections import deque
+from io import BytesIO
 
 import joblib
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from io import BytesIO
 
 from ambre.common_sense_rule import CommonSenseRule
 from ambre.itemsets_trie import ItemsetsTrie
 from ambre.preprocessor import Preprocessor
 from ambre.settings import Settings
+from ambre.versions import AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION, AMBRE_PACKAGE_VERSION
 
 
 class Database:
@@ -134,27 +135,51 @@ class Database:
         """Clear all common sense rules."""
         self.common_sense_rules = []
 
-    def save_to_file(self, filepath):
-        """Save the database into the given file."""
-        with open(filepath, "wb") as target_file:
-            joblib.dump(self, target_file, compress="lz4")
-
     def as_bytes(self):
         """Return a byte array representing the database."""
         with BytesIO() as byte_buffer:
-            joblib.dump(self, byte_buffer, compress="lz4")
+            joblib.dump(
+                {
+                    "metadata": {
+                        "AMBRE_PACKAGE_VERSION": AMBRE_PACKAGE_VERSION,
+                        "AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION": AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION,
+                    },
+                    "database": self,
+                },
+                byte_buffer,
+                compress="lz4",
+            )
             return byte_buffer.getvalue()
+
+    def save_to_file(self, filepath):
+        """Save the database into the given file."""
+        with open(filepath, "wb") as target_file:
+            target_file.write(self.as_bytes())
+
+    @staticmethod
+    def load_from_bytes(bytes_array) -> Database:
+        """Load the database from the specified bytes."""
+        loaded_data_structure = joblib.load(BytesIO(bytes_array))
+        package_version_from_file = loaded_data_structure["metadata"]["AMBRE_PACKAGE_VERSION"]
+        internal_database_schema_version_from_file = loaded_data_structure["metadata"]["AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION"]
+        if internal_database_schema_version_from_file != AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION:
+            raise Exception(
+                (
+                    f"Cannot load database due to incompatible database schema versions. The currently installed ambre "
+                    f"package version '{AMBRE_PACKAGE_VERSION}' expects internal database schema version "
+                    f"'{AMBRE_PACKAGE_INTERNAL_DATABASE_SCHEMA_VERSION}', but your database uses database schema "
+                    f"version '{internal_database_schema_version_from_file}', created by ambre version "
+                    f"'{package_version_from_file}'. Ensure that you are saving and loading databases with compatible "
+                    f"versions."
+                )
+            )
+        return loaded_data_structure["database"]
 
     @staticmethod
     def load_from_file(filepath) -> Database:
         """Load the database from the specified file."""
         with open(filepath, "rb") as source_file:
-            return joblib.load(source_file)
-
-    @staticmethod
-    def load_from_bytes(bytes_array) -> Database:
-        """Load the database from the specified bytes."""
-        return joblib.load(BytesIO(bytes_array))
+            return Database.load_from_bytes(source_file.read())
 
     def derive_frequent_itemsets_columns_dict(
         self,
@@ -437,6 +462,15 @@ class Database:
         See derive_rules_columns_dict() for parameter descriptions.
         """
         self.derive_rules_pandas(*args, **kwargs).to_csv(filename, header=True, index=False)
+
+    @staticmethod
+    def merge_databases(database1, database2) -> Database:
+        """Merge the given databases into a single database."""
+        # TODO: check if databases are compatible
+        # TODO: check which database is larger and select the smaller database to be merged into the bigger database
+        # TODO: do the merge
+        # TODO: return the result
+        pass
 
     @staticmethod
     def merge_rules_pandas(ruleset_df_1, ruleset_df_2):

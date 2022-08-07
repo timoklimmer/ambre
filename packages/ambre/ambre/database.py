@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import copy
 import random
 import sys
@@ -126,16 +127,42 @@ class Database:
         """Return the number of nodes in the underlying itemset trie."""
         return self.itemsets_trie.number_nodes
 
-    def insert_common_sense_rules(self, common_sense_rules):
+    def insert_common_sense_rules(self, common_sense_rules_to_insert):
         """
         Insert a batch of common sense rules.
 
         Common sense rules and rules that become redundant by the specified common sense rules are not returned when
         rules are derived. This helps concentrating on rules not known before.
         """
-        for common_sense_rule in common_sense_rules:
-            common_sense_rule.database = self
-        self.common_sense_rules = sorted(list(set((item for item in self.common_sense_rules + common_sense_rules))))
+        # update database in given rules
+        for common_sense_rule_to_insert in common_sense_rules_to_insert:
+            common_sense_rule_to_insert.database = self
+        # add the updated rules to the existing ones and sort the result
+        self.common_sense_rules = sorted(list(set((item for item in self.common_sense_rules + common_sense_rules_to_insert))))
+        # discard all rules where we have another rule with same antecedents and consequents but higher confidence
+        # note: assumes that self.common_sense_rules is sorted
+        self.common_sense_rules = sorted(list(
+            list(group)[-1]
+            for _, group in itertools.groupby(
+                self.common_sense_rules,
+                lambda common_sense_rule: (common_sense_rule.antecedents, common_sense_rule.consequents),
+            )
+        ))
+        # discard all redundant rules where we have another rule with the same confidence and consequents but
+        # antecedents are are a superset. a, b => x (1) == a => x (1). Hence, we can/should remove a, b => x (1).
+        # note: assumes that self.common_sense_rules is sorted
+        new_common_sense_rules = []
+        for index, common_sense_rule in enumerate(self.common_sense_rules):
+            if not any(
+                (
+                    lower_common_sense_rule.confidence == common_sense_rule.confidence
+                    and lower_common_sense_rule.consequents == common_sense_rule.consequents
+                    and set(lower_common_sense_rule.antecedents).issubset(common_sense_rule.antecedents)
+                    for lower_common_sense_rule in self.common_sense_rules[:index]
+                )
+            ):
+                new_common_sense_rules.append(common_sense_rule)
+        self.common_sense_rules = new_common_sense_rules
 
     def insert_common_sense_rule(self, antecedents, consequents, confidence=1):
         """
@@ -144,7 +171,7 @@ class Database:
         Common sense rules and rules that become redundant by the specified common sense rules are not returned when
         rules are derived. This helps concentrating on rules not known before.
         """
-        self.insert_common_sense_rules([CommonSenseRule(antecedents, consequents, confidence, self)])
+        self.insert_common_sense_rules([CommonSenseRule(self, antecedents, consequents, confidence)])
 
     def get_common_sense_rules(self):
         """Return the common sense rules."""

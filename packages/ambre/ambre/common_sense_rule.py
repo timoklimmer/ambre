@@ -9,7 +9,7 @@ class CommonSenseRule:
     to facilitate more focus on rules not known before.
     """
 
-    def __init__(self, antecedents, consequents, confidence=1, database=None):
+    def __init__(self, database, antecedents, consequents, confidence=1):
         """Init."""
         self.antecedents = database.preprocessor.normalize_itemset(antecedents)
         self.consequents = database.preprocessor.normalize_itemset(consequents)
@@ -44,19 +44,35 @@ class CommonSenseRule:
 
     def __lt__(self, other):
         """Check if the object is lower than the given object."""
-        return (self.antecedents, self.confidence) < (other.antecedents, other.confidence)
+        return (self.antecedents, self.consequents, self.confidence) < (
+            other.antecedents,
+            other.consequents,
+            other.confidence,
+        )
 
     def __le__(self, other):
         """Check if the object is lower than or equal to the given object."""
-        return (self.antecedents, self.confidence) <= (other.antecedents, other.confidence)
+        return (self.antecedents, self.consequents, self.confidence) <= (
+            other.antecedents,
+            other.consequents,
+            other.confidence,
+        )
 
     def __gt__(self, other):
         """Check if the object is greater than the given object."""
-        return (self.antecedents, self.confidence) > (other.antecedents, other.confidence)
+        return (self.antecedents, self.consequents, self.confidence) > (
+            other.antecedents,
+            other.consequents,
+            other.confidence,
+        )
 
     def __ge__(self, other):
         """Check if the object is greater than or equal to the given object."""
-        return (self.antecedents, self.confidence) >= (other.antecedents, other.confidence)
+        return (self.antecedents, self.consequents, self.confidence) >= (
+            other.antecedents,
+            other.consequents,
+            other.confidence,
+        )
 
     def __hash__(self):
         """Return a hash value for this instance."""

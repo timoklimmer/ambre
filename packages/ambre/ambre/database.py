@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import itertools
 import copy
+import itertools
 import random
 import sys
 import warnings
@@ -138,16 +138,20 @@ class Database:
         for common_sense_rule_to_insert in common_sense_rules_to_insert:
             common_sense_rule_to_insert.database = self
         # add the updated rules to the existing ones and sort the result
-        self.common_sense_rules = sorted(list(set((item for item in self.common_sense_rules + common_sense_rules_to_insert))))
+        self.common_sense_rules = sorted(
+            list(set((item for item in self.common_sense_rules + common_sense_rules_to_insert)))
+        )
         # discard all rules where we have another rule with same antecedents and consequents but higher confidence
         # note: assumes that self.common_sense_rules is sorted
-        self.common_sense_rules = sorted(list(
-            list(group)[-1]
-            for _, group in itertools.groupby(
-                self.common_sense_rules,
-                lambda common_sense_rule: (common_sense_rule.antecedents, common_sense_rule.consequents),
+        self.common_sense_rules = sorted(
+            list(
+                list(group)[-1]
+                for _, group in itertools.groupby(
+                    self.common_sense_rules,
+                    lambda common_sense_rule: (common_sense_rule.antecedents, common_sense_rule.consequents),
+                )
             )
-        ))
+        )
         # discard all redundant rules where we have another rule with the same confidence and consequents but
         # antecedents are are a superset. a, b => x (1) == a => x (1). Hence, we can/should remove a, b => x (1).
         # note: assumes that self.common_sense_rules is sorted
@@ -529,9 +533,6 @@ class Database:
               parameter to FALSE. However, since this requires a copy of the larger target database, performance might
               be negatively impacted.
         """
-
-        raise Exception("Not implemented yet.")
-
         # -- ensure that database schema versions are supported
         if (
             database1.DATABASE_SCHEMA_VERSION != AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION
@@ -576,13 +577,9 @@ class Database:
 
         # do NOT update number of nodes
         # note: - this will be done automatically by itemsets_trie.get_or_create_child()
-        #       - simply summing the number of nodes of both databases would be wrong because some nodes exist in both
-        #         databases
 
-        # merge nodes by walking breadth first down the nodes of the source trie and add whatever is missing in the
-        # target trie
-        # TODO: complete
-        # TODO: also update occurrences
+        # merge itemsets trie from source database into target database
+        target_database.itemsets_trie.merge(source_database.itemsets_trie)
 
         # adopt common sense rules
         target_database.insert_common_sense_rules(source_database.get_common_sense_rules())

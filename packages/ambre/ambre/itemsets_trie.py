@@ -26,7 +26,7 @@ class ItemsetsTrie:
         self.number_nodes = 1
 
     def insert_normalized_consequents_antecedents(self, consequents, antecedents):
-        """Insert the given normalized transaction to the trie."""
+        """Insert the given normalized transaction into the trie."""
         # basic approach: for each node, add all items that follow that node in the itemset as children.
         #                 an itemset of size n leads to 2**n-1 nodes.
 
@@ -39,7 +39,7 @@ class ItemsetsTrie:
 
         def _create_or_update_child_node(item_plus_meta):
             nonlocal stack, index
-            child_node = node.get_or_create_child(*item_plus_meta)
+            child_node, _ = node.get_or_create_child(*item_plus_meta)
             child_node.occurrences += 1
             new_antecedents_count = antecedents_count + (child_node.is_consequent is False)
             if (not self.max_antecedents_length) or (new_antecedents_count < self.max_antecedents_length):
@@ -55,7 +55,7 @@ class ItemsetsTrie:
         # def _add_itemset_powerset_recursive(self, node, start_index, antecedents_count):
         #     index = 0
         #     for item_plus_meta in itemset_plus_meta[start_index:]:
-        #         child_node = node.get_or_create_child(*item_plus_meta)
+        #         child_node, _ = node.get_or_create_child(*item_plus_meta)
         #         child_node.occurrences += 1
         #         new_antecedents_count = antecedents_count + (child_node.is_consequent is False)
         #         if (not self.max_antecedents_length) or (new_antecedents_count < self.max_antecedents_length):
@@ -125,6 +125,65 @@ class ItemsetsTrie:
         _recursive_trie_walkdown_breadth_first(self.get_consequent_root_nodes())
         return result
 
+    def merge(self, itemsets_trie):
+        """Merge the given itemsets trie into this itemsets trie."""
+        source_itemsets_trie = itemsets_trie
+        target_itemsets_trie = self
+        stack = deque([(source_itemsets_trie.root_node, target_itemsets_trie.root_node)])
+        while len(stack) > 0:
+            source_node, target_node = stack.pop()
+            for source_child in source_node.children.values():
+                target_child, _ = target_node.get_or_create_child(source_child.item, source_child.is_consequent)
+                target_child.occurrences += source_child.occurrences
+                stack.append((source_child, target_child))
+        return self
+
+    def print(self, to_string=False):
+        """
+        Print the itemsets trie.
+
+        If to_string is set to True, the function returns a string containing the result instead of printing.
+        """
+        result_lines = []
+
+        def _our_own_print(message):
+            if to_string:
+                result_lines.append(message)
+            else:
+                print(message)
+
+        _our_own_print("Occurrences | Support | Confidence | Lift   | Path")
+        _our_own_print("-" * 80)
+        stack = deque([self.root_node])
+        while len(stack) > 0:
+            current_node = stack.pop()
+            if current_node.itemset_length != 0:
+                current_node_itemset_length = current_node.itemset_length
+                indentation = 2 * (current_node_itemset_length - 1) * " "
+                edge = " └ " if current_node_itemset_length > 1 else ""
+                itemset = f"{'(' if current_node.is_consequent else ''}{current_node}{')' if current_node.is_consequent else ''}"
+                _our_own_print(
+                    (
+                        f"{current_node.occurrences}".rjust(11)
+                        + " | "
+                        + f"{current_node.support:.2f}".rjust(7)
+                        + " | "
+                        + f"{current_node.confidence:.2f}".rjust(10)
+                        + " | "
+                        + f"{current_node.lift:.2f}".rjust(6)
+                        + " | "
+                        + f"{indentation}{edge}{itemset}"
+                    )
+                )
+            for source_child in sorted(current_node.children.values(), reverse=True):
+                stack.append(source_child)
+
+        _our_own_print(f"\nTotal number of transactions: {self.number_transactions}")
+        _our_own_print(f"Total number of nodes (incl. root node): {self.number_nodes}")
+
+        if to_string:
+            return "\n".join(result_lines)
+
 
 class ItemsetNode(dataobject):
     """An itemset within an itemset trie."""
@@ -138,12 +197,12 @@ class ItemsetNode(dataobject):
 
         Parameter 'children' should be a dict with items as keys and values as nodes.
         """
-        self.item :str = item
-        self.children : dict = children
-        self.parent_node : ItemsetNode = parent_node
-        self.itemsets_trie : ItemsetsTrie = itemsets_trie
-        self.is_consequent : bool = is_consequent
-        self.occurrences : int = occurrences
+        self.item: str = item
+        self.children: dict = children
+        self.parent_node: ItemsetNode = parent_node
+        self.itemsets_trie: ItemsetsTrie = itemsets_trie
+        self.is_consequent: bool = is_consequent
+        self.occurrences: int = occurrences
 
     def __repr__(self):
         """More comfortable string representation of the object."""
@@ -151,13 +210,15 @@ class ItemsetNode(dataobject):
 
     def get_or_create_child(self, item, is_consequent):
         """Get or create a child node."""
+        created_new_child = False
         child_node = self.children.get(item, None)
         if child_node is None:
             new_child_node = ItemsetNode(item, self, self.itemsets_trie, is_consequent, {}, 0)
-            self.itemsets_trie.number_nodes += 1
             self.children[item] = new_child_node
+            self.itemsets_trie.number_nodes += 1
             child_node = new_child_node
-        return child_node
+            created_new_child = True
+        return child_node, created_new_child
 
     @property
     def itemset_unsorted_set(self):
@@ -218,7 +279,7 @@ class ItemsetNode(dataobject):
     @property
     def confidence(self):
         """Return the itemset's confidence."""
-        #return self.support / self.itemsets_trie.get_itemset_node(self.antecedents).support
+        # return self.support / self.itemsets_trie.get_itemset_node(self.antecedents).support
         antecedents = self.antecedents
         if self.antecedents:
             return self.support / self.itemsets_trie.get_itemset_node(antecedents).support
@@ -228,7 +289,7 @@ class ItemsetNode(dataobject):
     def lift(self):
         """Return the itemset's confidence."""
         consequents, antecedents = self.consequents_antecedents
-        if self.antecedents:
+        if self.antecedents and self.consequents:
             return self.support / (
                 self.itemsets_trie.get_itemset_node(antecedents).support
                 * self.itemsets_trie.get_itemset_node(consequents).support

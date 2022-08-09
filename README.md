@@ -54,7 +54,7 @@ within a cell for a quick install. For production-ready installation, install th
 
 ## Usage Example
 
-### Plain Python - Non-Tabular Data
+### Non-Tabular Data
 ```python
 from IPython.display import display
 
@@ -78,7 +78,7 @@ rules = database.derive_rules_pandas(non_antecedents_rules=True)
 display(rules)
 ```
 
-### Plain Python - Tabular Data
+### Tabular Data + Common Sense Rules
 ```python
 import pandas as pd
 from IPython.display import display
@@ -118,10 +118,48 @@ derived_rules = derived_rules.sort_values(by=["confidence", "occurrences"], asce
 display(derived_rules)
 ```
 
-### pyspark
-There is also an initial [example for pyspark](pyspark-example.py) which runs in Spark 3+. The Spark example is more
-scalable than the non-Spark one but might be inaccurate when partitions are not properly distributed. ambre's Spark
-support may be improved in future, so stay tuned.
+### Distributed Training
+```python
+from IPython.display import display
+
+from ambre import Database
+
+# populate database 1 in a fictive process 1
+database1 = Database(["bread", "milk"])
+database1.insert_transaction(["milk", "bread"])
+database1.insert_transaction(["butter"])
+# optionally save the database either to a file or byte array as needed
+# file       : database1.save_to_file("database1.ambre.db")
+# byte array : database1_as_byte_array = database1.as_bytes()
+
+# populate database 2 in fictive process 2
+database2 = Database(["bread", "milk"])
+database2.insert_transaction(["bread", "coke"])
+database2.insert_transaction(["milk", "honey"])
+# optionally save database, similar to above
+
+# populate database 3 in fictive process 3
+database3 = Database(["bread", "milk"])
+database3.insert_transaction(["candy"])
+database3.insert_transaction(["mustard", "salad"])
+# optionally save database, similar to above
+
+# make sure we have the database objects again (if saved before)
+# file       : database1 = Database.load_from_file("database1.ambre.db")
+# byte array : database1 = Database.load_from_bytes(database1_as_byte_array)
+
+# merge all databases into a single database
+merged_database = Database.merge_databases(database1, database2, database3)
+
+# query frequent itemsets
+frequent_itemsets = merged_database.derive_frequent_itemsets_pandas()
+display(frequent_itemsets)
+
+# query rules
+rules = merged_database.derive_rules_pandas(non_antecedents_rules=True)
+display(rules)
+```
+
 
 ## Glossary
 |Term|Meaning|
@@ -167,8 +205,10 @@ Besides, it is always a good idea not to pass irrelevant data to ambre. You are 
 from technical fields such as "created_at", "is_deleted" etc. Removing/not passing such data will improve ambre's
 performance.
 
-In some cases you may also be able to group individual items to aggregated items. Aggregated items mean less items, and
-the less items you have, the faster is ambre because it needs to deal with less data then.
+In some cases you may also be able to group individual items to a group. Grouped items mean less items, and the less
+items you have, the faster is ambre because it needs to deal with less data then.
+
+If performance is still not sufficient, you can also try distributing the training, as suggested above.
 
 
 ## Disclaimer

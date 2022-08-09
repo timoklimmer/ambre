@@ -523,15 +523,30 @@ class Database:
         return copy.deepcopy(self)
 
     @staticmethod
-    def merge_databases(database1: Database, database2: Database, inplace=True) -> Database:
+    def merge_databases(database1: Database, database2: Database, *further_databases) -> Database:
+        """
+        Merge the given database into a single database.
+
+        Note: For performance/memory reasons, the merge operation is performed "in-place", means: specified databases
+            might be modified. If you need to keep the specified databases, pass copies of your databases by using
+            the <database>.copy() method.
+        """
+        databases_to_merge = sorted(
+            [database1, database2, *further_databases], key=lambda database: database.number_nodes
+        )
+        largest_database = databases_to_merge[-1]
+        for database in databases_to_merge[:-1]:
+            largest_database = Database.merge_database_pair(largest_database, database)
+        return largest_database
+
+    @staticmethod
+    def merge_database_pair(database1: Database, database2: Database, inplace=True) -> Database:
         """
         Merge the given databases into a single database and return the result.
 
-        Note: For performance/memory reasons, the merge operation is by default performed "in-place", means: the smaller
-              of the given databases is merged into the larger one, and the larger one is returned. Thereby, the larger
-              database will be modified. If for whatever reason, input databases need to be kept as is, set the inplace
-              parameter to FALSE. However, since this requires a copy of the larger target database, performance might
-              be negatively impacted.
+        Note: For performance/memory reasons, the merge operation is performed "in-place", means: specified databases
+              might be modified. If you need to keep the specified databases, pass copies of your databases by using
+              the <database>.copy() method.
         """
         # -- ensure that database schema versions are supported
         if (

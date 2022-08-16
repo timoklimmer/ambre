@@ -351,9 +351,7 @@ class Database:
         }
 
         rules_temp = {
-            self.preprocessor.itemset_to_string(
-                common_sense_rule.consequents + common_sense_rule.antecedents
-            ): common_sense_rule.confidence
+            frozenset(common_sense_rule.consequents + common_sense_rule.antecedents): common_sense_rule.confidence
             for common_sense_rule in self.common_sense_rules
         }
 
@@ -364,7 +362,7 @@ class Database:
                 if (
                     (rule_confidence - confidence_tolerance <= confidence <= rule_confidence + confidence_tolerance)
                     or (rule_confidence == 1)
-                ) and self.preprocessor.string_to_itemset_set(rule_itemset).issubset(consequents.union(antecedents)):
+                ) and rule_itemset.issubset(consequents.union(antecedents)):
                     return True
             return False
 
@@ -439,9 +437,7 @@ class Database:
                                 result["antecedents_length"].append(current_node_antecedent_size)
 
                                 # add rule to temp rules to avoid redundant rules
-                                rules_temp[
-                                    self.preprocessor.itemset_to_string(consequents + antecedents)
-                                ] = current_node_confidence
+                                rules_temp[frozenset(consequents + antecedents)] = current_node_confidence
 
                     # only continue if the antecedents size is below the allowed maximum (which is the case here anyway,
                     # therefore no additional check) and if the current nodes confidence is different from 1

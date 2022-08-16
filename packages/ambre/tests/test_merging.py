@@ -1,6 +1,4 @@
-"""
-Test the database merging.
-"""
+"""Test the database merging."""
 
 import pytest
 from ambre import Database

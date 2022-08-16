@@ -73,7 +73,7 @@ class Database:
             )
         columns = input_columns if input_columns else pandas_df.columns
         self.insert_transactions(
-            [
+            (
                 [
                     (
                         f"{row[column]}"
@@ -83,7 +83,7 @@ class Database:
                     for column in columns
                 ]
                 for _, row in pandas_df.iterrows()
-            ],
+            ),
             sampling_ratio,
             show_progress,
         )

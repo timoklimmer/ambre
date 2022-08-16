@@ -107,10 +107,6 @@ class Database:
                 maxlen=0,
             )
 
-        # for transaction in transaction_iterator:
-        #     if sampling_ratio == 1 or (random.random() < sampling_ratio):
-        #         self.insert_transaction(transaction)
-
     def insert_transaction(self, transaction):
         """Insert the given transaction."""
         self.itemsets_trie.insert_normalized_consequents_antecedents(

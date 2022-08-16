@@ -221,16 +221,6 @@ class ItemsetNode(dataobject):
         return child_node, created_new_child
 
     @property
-    def itemset_unsorted_set(self):
-        """Return itemset as unsorted set."""
-        result = set()
-        iterated_node = self
-        while iterated_node.parent_node is not None:
-            result = result.union({iterated_node.item})
-            iterated_node = iterated_node.parent_node
-        return result
-
-    @property
     def itemset_sorted_list(self):
         """Return itemset as sorted list."""
         result = []
@@ -243,7 +233,12 @@ class ItemsetNode(dataobject):
     @property
     def itemset_length(self):
         """Return the number of items in the itemset."""
-        return len(self.itemset_unsorted_set)
+        result = 0
+        iterated_node = self
+        while iterated_node.parent_node is not None:
+            result += 1
+            iterated_node = iterated_node.parent_node
+        return result
 
     @property
     def consequents(self):

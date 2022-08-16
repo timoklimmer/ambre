@@ -16,9 +16,9 @@ class Preprocessor:
     def normalize_itemset(self, itemset, sort_result=True):
         """Normalize the given itemset (any iterable)."""
         if self.settings.normalize_whitespace:
-            itemset = [re.sub(r"\s+", " ", item).strip() for item in itemset]
+            itemset = (re.sub(r"\s+", " ", item).strip() for item in itemset)
         if self.settings.case_insensitive:
-            itemset = [item.lower() for item in itemset]
+            itemset = (item.lower() for item in itemset)
         itemset = set(itemset)
         if sort_result:
             itemset = self.sort_itemset_consequents_first(itemset)

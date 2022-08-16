@@ -350,11 +350,12 @@ class Database:
             "antecedents_length": [],
         }
 
-        rules_temp = {}
-        for common_sense_rule in self.common_sense_rules:
-            rules_temp[
-                self.preprocessor.itemset_to_string(common_sense_rule.consequents + common_sense_rule.antecedents)
-            ] = common_sense_rule.confidence
+        rules_temp = {
+            self.preprocessor.itemset_to_string(
+                common_sense_rule.consequents + common_sense_rule.antecedents
+            ): common_sense_rule.confidence
+            for common_sense_rule in self.common_sense_rules
+        }
 
         def _any_preexisting_rule_with_antecedents_subset_and_same_confidence(
             rules_temp, antecedents, consequents, confidence, confidence_tolerance

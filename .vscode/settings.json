@@ -1,7 +1,6 @@
 {
     "files.trimTrailingWhitespace": true,
     "python.formatting.provider": "black",
-    "python.pythonPath": "C:\\Users\\${env:USERNAME}\\Miniconda3\\envs\\ambre\\python.exe",
     "outline.showArrays": false,
     "outline.showBooleans": false,
     "outline.showEnumMembers": false,
@@ -29,14 +28,11 @@
     "python.formatting.blackArgs": [
         "--line-length=120"
     ],
-    "python.analysis.disabled": [
-        "unresolved-import"
-    ],
     "python.linting.enabled": true,
     "python.linting.pylintEnabled": true,
     "python.linting.pylintArgs": [
         "--max-line-length=180",
-        "--disable=dangerous-default-value,too-many-arguments,bad-continuation,redefined-outer-name,protected-access,too-few-public-methods,wrong-import-order"
+        "--disable=dangerous-default-value,too-many-arguments,redefined-outer-name,protected-access,too-few-public-methods,wrong-import-order"
     ],
     "python.linting.pycodestyleEnabled": true,
     "python.linting.pycodestyleArgs": [
@@ -47,8 +43,6 @@
     ],
     "python.linting.pydocstyleEnabled": true,
     "editor.minimap.enabled": false,
-    "jupyter.jupyterServerType": "local",
     "python.testing.unittestEnabled": false,
-    "python.testing.nosetestsEnabled": false,
     "python.testing.pytestEnabled": true,
 }

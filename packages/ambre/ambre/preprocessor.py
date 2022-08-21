@@ -1,12 +1,14 @@
 """Defines the Preprocessor class."""
 
 import re
+from .settings import Settings
+from .helpers.strings import compress_string, decompress_string
 
 
 class Preprocessor:
     """Preprocesses (mostly) incoming data."""
 
-    def __init__(self, settings):
+    def __init__(self, settings: Settings):
         """Init."""
         self.settings = settings
         self.normalized_consequents = sorted(
@@ -57,3 +59,11 @@ class Preprocessor:
     def remove_column_names_from_itemset(self, itemset):
         """Remove column names from items in itemset."""
         return [re.sub(f"^.+?{re.escape(self.settings.column_value_separator)}", "", item) for item in itemset]
+
+    def compress_item(self, uncompressed_item):
+        """Compress the given item string."""
+        return compress_string(uncompressed_item, input_alphabet=self.settings.item_alphabet)
+
+    def uncompress_item(self, compressed_item):
+        """Uncompress the given compressed item string."""
+        return decompress_string(compressed_item, original_input_alphabet=self.settings.item_alphabet)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import itertools
 import random
+import string
 import sys
 import warnings
 from collections import deque
@@ -38,6 +39,7 @@ class Database:
         column_value_separator="=",
         omit_column_names=False,
         disable_string_consequent_warning=False,
+        item_alphabet=string.printable,
     ):
         """Init."""
         if not disable_string_consequent_warning and isinstance(consequents, str):
@@ -56,12 +58,14 @@ class Database:
             item_separator_for_string_outputs,
             column_value_separator,
             omit_column_names,
+            item_alphabet=item_alphabet,
         )
         self.preprocessor = Preprocessor(self.settings)
         self.itemsets_trie = ItemsetsTrie(
             self.preprocessor.normalized_consequents,
             self.settings.max_antecedents_length,
             self.settings.item_separator_for_string_outputs,
+            self.settings.item_alphabet,
         )
         self.common_sense_rules = []
 

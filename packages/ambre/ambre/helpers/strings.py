@@ -8,6 +8,8 @@ def compress_string(
     output_alphabet="".join((chr(char_number) for char_number in range(0, 256))),
 ):
     """Compress the given string to a shorter string, using a longer output alphabet than the input alphabet."""
+    if input_alphabet is None or output_alphabet is None:
+        return string
     input_base = len(input_alphabet)
     cumulated_number = 0
     is_first_char = True
@@ -38,4 +40,6 @@ def decompress_string(
     original_output_alphabet="".join((chr(char_number) for char_number in range(0, 256))),
 ):
     """Decompress the given string to its original value."""
+    if original_input_alphabet is None or original_output_alphabet is None:
+        return string
     return compress_string(compressed_string, original_output_alphabet, original_input_alphabet)

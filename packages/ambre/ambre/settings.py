@@ -1,5 +1,6 @@
 """Everything related to settings."""
 
+import string
 
 class Settings:
     """Holds all settings at a central place."""
@@ -13,6 +14,7 @@ class Settings:
         item_separator_for_string_outputs=" ∪ ",
         column_value_separator="=",
         omit_column_names=False,
+        item_alphabet=string.printable
     ):
         """Init."""
         self.consequents = consequents
@@ -22,6 +24,7 @@ class Settings:
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
         self.column_value_separator = column_value_separator
         self.omit_column_names = omit_column_names
+        self.item_alphabet = item_alphabet
 
     def __eq__(self, other):
         """Check if the given object is equal to this one."""
@@ -35,6 +38,7 @@ class Settings:
             and self.item_separator_for_string_outputs == other.item_separator_for_string_outputs
             and self.column_value_separator == other.column_value_separator
             and self.omit_column_names == other.omit_column_names
+            and self.item_alphabet == other.item_alphabet
         )
 
     def __hash__(self):
@@ -47,4 +51,5 @@ class Settings:
             self.item_separator_for_string_outputs,
             self.column_value_separator,
             self.omit_column_names,
+            self.item_alphabet
         )

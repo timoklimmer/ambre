@@ -4,6 +4,8 @@ from collections import deque
 
 from recordclass import dataobject
 
+from ambre.helpers.strings import decompress_string
+
 
 class ItemsetsTrie:
     """
@@ -16,12 +18,15 @@ class ItemsetsTrie:
     Note: Intentionally using duplicate code here to facilitate a port to Rust later.
     """
 
-    def __init__(self, normalized_consequents, max_antecedents_length, item_separator_for_string_outputs):
+    def __init__(
+        self, normalized_consequents, max_antecedents_length, item_separator_for_string_outputs, item_alphabet
+    ):
         """Init."""
         self.root_node = ItemsetNode("", None, self, None, {}, 0)
         self.normalized_consequents = normalized_consequents
         self.max_antecedents_length = max_antecedents_length
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
+        self.item_alphabet = item_alphabet
         self.number_transactions = 0
         self.number_nodes = 1
 
@@ -175,7 +180,10 @@ class ItemsetsTrie:
                         + f"{indentation}{edge}{itemset}"
                     )
                 )
-            for source_child in sorted(current_node.children.values(), reverse=True):
+            for source_child in sorted(
+                current_node.children.values(),
+                reverse=True,
+            ):
                 stack.append(source_child)
 
         _our_own_print(f"\nTotal number of transactions: {self.number_transactions}")

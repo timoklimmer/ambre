@@ -373,11 +373,13 @@ class Database:
         def _any_preexisting_rule_with_antecedents_subset_and_same_confidence(
             rules_temp, antecedents, consequents, confidence, confidence_tolerance
         ):
+            antecedents_set = set(antecedents)
+            consequents_set = set(consequents)
             for rule_itemset, rule_confidence in rules_temp.items():
                 if (
                     (rule_confidence - confidence_tolerance <= confidence <= rule_confidence + confidence_tolerance)
                     or (rule_confidence == 1)
-                ) and rule_itemset.issubset(consequents.union(antecedents)):
+                ) and rule_itemset.issubset(consequents_set.union(antecedents_set)):
                     return True
             return False
 
@@ -418,8 +420,8 @@ class Database:
                             and ((max_occurrences is None) or (current_node_occurrences <= max_occurrences))
                             and (current_node_occurrences >= min_occurrences)
                         ):
-                            antecedents = current_node.antecedents_compressed
-                            consequents = current_node.consequents_compressed
+                            antecedents_compressed = current_node.antecedents_compressed
+                            consequents_compressed = current_node.consequents_compressed
 
                             # condition: there is no rule yet which predicts the same consequents with a subset of the
                             #            current rule's antecedents and the same confidence (within tolerances)
@@ -428,16 +430,15 @@ class Database:
                             #            overrules with confidence=1
                             if not _any_preexisting_rule_with_antecedents_subset_and_same_confidence(
                                 rules_temp,
-                                set(antecedents),
-                                set(consequents),
+                                antecedents_compressed,
+                                consequents_compressed,
                                 current_node_confidence,
                                 confidence_tolerance,
                             ):
                                 # add rule to result
-                                consequents, antecedents = current_node.consequents_antecedents_compressed
                                 consequents_to_append, antecedents_to_append = self.prepostprocessor.decompress_itemset(
-                                    consequents
-                                ), self.prepostprocessor.decompress_itemset(antecedents)
+                                    consequents_compressed
+                                ), self.prepostprocessor.decompress_itemset(antecedents_compressed)
                                 if not self.settings.omit_column_names and omit_column_names_in_output:
                                     consequents_to_append = (
                                         self.prepostprocessor.remove_column_names_from_uncompressed_itemset(
@@ -458,7 +459,9 @@ class Database:
                                 result["antecedents_length"].append(current_node_antecedent_size)
 
                                 # add rule to temp rules to avoid redundant rules
-                                rules_temp[frozenset(consequents + antecedents)] = current_node_confidence
+                                rules_temp[
+                                    frozenset(consequents_compressed + antecedents_compressed)
+                                ] = current_node_confidence
 
                     # only continue if the antecedents size is below the allowed maximum (which is the case here anyway,
                     # therefore no additional check) and if the current nodes confidence is different from 1

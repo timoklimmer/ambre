@@ -4,27 +4,69 @@
 
 # ambre
 
-> TL;DR -- **Give ambre your data and tell it what outcomes in your data you are interested in. It then tells you when
-those outcomes occur.**
+> TLDR: **Give it your data, and it tells you under which circumstances the outcomes you are interested in occur.**
 
-ambre is a package for association mining-based rules extraction -- it extracts rules from your data in the form of
-*factors (named "antecedents")* --lead to--> *outcomes (named "consequents")*. In contrast to other approaches like
-deriving feature importances, it tells you more than just columns. It tells you exactly which *combinations* of
-*concrete* values lead to your outcomes of interest most frequently and at which confidence.
+ambre is a package for association mining-based rules extraction. It processes your data and extracts rules of interest
+for you, in the form of:
 
-For instance, imagine you had to manage a production line. By using traditional approaches, you would learn for example
-that your vendors or the used machine models are a critical factor for defects. In contrast, ambre will tell you that a
-defect occurs most likely when the vendor is *"ABC"*, and when machine model *"XYZ"* is used. Because it's more
-detailed, the information we get from ambre can be more valuable than pure importance of factors.
+<p align="center">
+<i><b>which factors</b> (identified for you by ambre) <b>--lead to--></b> <b>which outcomes of interest</b> (defined by
+you)
+<br/>
+at confidence = x%, with support = n cases
+</i>
+</p>
 
-ambre can even work with non-columnar data. It's no problem if the "transactions" (see below) consist of different
-numbers of items.
+In contrast to other approaches like deriving feature importances, it tells you more than just columns and their
+influence on outcomes. Instead, it tells you exactly which *combinations* of *concrete* values lead to your outcomes,
+together with tangible statistics that let you easily retrace results.
 
-To increase usability, there is also a feature to specify common sense knowledge. Let's assume you know already that
-machine model *XYZ* produces one defect after another. With the common sense feature, you can tell ambre, and it will
-not create boring and confusing rules for things you already know.
+Extracted rules are minimal. Besides, there are multiple settings to control the rule extraction. In practice, that
+means that you can concentrate on the rules that really matter (also read *Common Sense Filter* below).
 
-The ultimate goal of ambre is to deliver actionable insights. As detailed as necessary but not more.
+**ambre is here to help you find the needle in the haystack -- fast and actionable.**
+
+## Example Use Cases
+### Reduce Defects in a Production Line
+For instance, imagine you had to manage a production line, and your production produces too many defects. Through
+traditional machine learning approaches, you would learn for example that (a) your machine vendors as well as (b) the
+material used are highly correlated with the number of defects encountered.
+
+Contrary, ambre would tell you that a defect occurs at a confidence of 83% when the vendor is *"Litware Inc."* and
+material "Nylon 23A-B" is used, having seen 1.234 cases of that in your data.
+
+Because ambre's output is more detailed, the information we get from it is more valuable than pure importances of
+factors.
+
+### Increase Customer Satisfaction of a Service Desk
+Another example: imagine you were responsible for a service desk. Your CSAT score is terribly low, and you need more
+insight into where you can take targeted countermeasures. One option is to sift through numerous reports and try to find
+exactly that one bar chart which makes your life good again. The other option is to feed ambre with your feedback and
+ticket data. Once fed, ambre can show you in a snap where to look at and prioritize.
+
+## More Highlights
+### Common Sense Filter
+To increase usability, ambre has a feature to filter out common sense knowledge. Let's assume you know already that
+machine model *XYZ* produces one defect after another. With the common sense feature, you can tell ambre that you know
+that already, and when it generates rules next time, it does not bother you with information you already have.
+
+### Online / Distributed / Federated
+When loading data into ambre, you don't have to feed it with batch data. You can add additional individual transactions
+whenever desired. Because ambre's databases can be stored to files (and even byte arrays), it can easily be used for
+online machine learning solutions. Databases can also be merged, which enables distributed training and federated
+learning architectures.
+
+### No Tables Required
+ambre databases are populated with so-called "transactions". A transaction (aka. "itemset") is a set of items that
+belong together and form a case/data point. An example transaction for the production line case mentioned above could be:
+`{"Litware Inc.", "Nylon 23A-B", "Toronto Plant", "Nightshift", "CW23", "Hole"}`. Unlike with tables where each row has
+a fixed set of items (= the cells in the row), ambre accepts arbitrary-sized transactions. Simply add what you know
+about the respective case, and ambre will find the rules for you.
+
+### Frequent Itemsets
+ambre's main purpose is to extract rules. The required data structure underneath is however well suited for frequent
+itemset mining, too. In case you are looking for a frequent itemset mining solution "only", you can also use ambre for
+it.
 
 
 ## Installation
@@ -43,13 +85,6 @@ clone the repo and install the package by running `pip install -e .` in folder `
 
 You can also add the package to your `requirements.txt` file by adding a
 `git+https://github.com/timoklimmer/ambre.git#subdirectory=packages/ambre` line.
-
-### Azure Databricks
-If you are on Databricks, run
-
-`%pip install --upgrade git+https://github.com/timoklimmer/ambre.git#subdirectory=packages/ambre`
-
-within a cell for a quick install. For production-ready installation, install the package via your init script.
 
 
 ## Usage Example
@@ -118,13 +153,13 @@ derived_rules = derived_rules.sort_values(by=["confidence", "occurrences"], asce
 display(derived_rules)
 ```
 
-### Distributed Training
+### Distributed / Federated Training
 ```python
 from IPython.display import display
 
 from ambre import Database
 
-# populate database 1 in a fictive process 1
+# populate first database in a fictive process or location 1
 database1 = Database(["bread", "milk"])
 database1.insert_transaction(["milk", "bread"])
 database1.insert_transaction(["butter"])
@@ -132,13 +167,13 @@ database1.insert_transaction(["butter"])
 # file       : database1.save_to_file("database1.ambre.db")
 # byte array : database1_as_byte_array = database1.as_bytes()
 
-# populate database 2 in fictive process 2
+# populate second database in a fictive process or location 2
 database2 = Database(["bread", "milk"])
 database2.insert_transaction(["bread", "coke"])
 database2.insert_transaction(["milk", "honey"])
 # optionally save database, similar to above
 
-# populate database 3 in fictive process 3
+# populate third database in a fictive process or location 3
 database3 = Database(["bread", "milk"])
 database3.insert_transaction(["candy"])
 database3.insert_transaction(["mustard", "salad"])
@@ -177,33 +212,43 @@ display(rules)
 
 
 ## Performance
-ambre can lead to valuable results but its performance might not be as you expect. Compared to other machine learning
-algorithms, it has to create a lot of combinations and store them in a trie data structure. This can take a lot of time,
-and it seems there is no workaround or smarter method yet.
+ambre can bring valuable benefits for business, but under certain circumstances its runtime performance might not meet
+your needs. Compared to other machine learning algorithms, it has to create a lot of combinations and store them in an
+internal trie data structure. This can take a lot of time, and it seems there is no workaround or smarter method yet.
 
 The good news is that ambre's performance is highly dependent on its configuration. To improve ambre's performance, you
-can set a couple of parameters when creating the database and when using the *derive_...()* methods.
+can set a couple of parameters when creating the database and/or later when using the database.
 
-Whenever possible, you should prefer to set the parameters at the database, because this will help filter data as early
-as possible, avoiding unnecessary workload in the derive..() methods.
+Whenever possible, you should prefer to set the parameters at the database level, because that helps filter data as
+early as possible, avoiding unnecessary workload at later steps. Note however that some parameters can only be set at
+the respective methods used after the database has been populated.
 
-- `max_antecedents_length` controls how many antecedents you are returned at maximum when frequent itemsets or rules are
-generated. In most of the cases, you are only interested in maybe 3 or 5 antecedents anyway because results with more
-antecedents get confusing. It is recommendeded to set the parameter to a reasonable value when creating the Database
-object. This should lead to dramatic performance improvements (and memory savings). Note that you can safely use a low
-parameter value. Results will still be correct even if transactions have more than *max_antecedents_length* items.
+- `max_antecedents_length` (integer) controls how many antecedents are returned per rule at maximum when frequent
+itemsets or rules are generated. In most of the cases, you are only interested in maybe 3 or 5 antecedents anyway
+because results with more antecedents get confusing. It is recommended to set the parameter to a reasonable value when creating the Database object. Setting max_antecedents_length right can bring dramatic performance improvements (and
+memory savings). Note that you can safely use a low parameter value. Results will still be correct, it will just not generate rules with more than the specified antecedents.
 
-- `min_occurrences` controls how many occurences are needed at minimum for consideration. In many cases, you would
-filter out results with too few occurences anyway. Setting a min_occurences value can speed up things because less data
-is generated.
+- `min_occurrences` (integer) controls how many occurences are needed at minimum for consideration. In many cases, you
+would filter out results with too few occurences anyway. Setting a min_occurences value can speed up things because less
+data is generated.
 
-- `min_confidence` (and other min... settings) are similar to min_occurences. It's just another way to filter results.
-You are likely not interested in rules with low confidences anyway. So filtering them out will reduce data that needs to
-be processed and hence speed up things.
+- `min_confidence` (and other min... settings) (number between 0 and 1) are similar to min_occurences. It's just another
+way to filter results. You are likely not interested in rules with low confidences anyway. So filtering them out will
+reduce data that needs to be processed and hence speed up things.
 
-Besides, it is always a good idea not to pass irrelevant data to ambre. You are probably not interested in data coming
-from technical fields such as "created_at", "is_deleted" etc. Removing/not passing such data will improve ambre's
+- `item_alphabet` (string) defines which characters can be used in the item names. ambre has a feature which compresses
+item names internally, to save memory. If you already know that your item names contain only alphanumeric characters,
+for example, you can set this parameter for example to `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ`. The more narrow the item alphabet, the more memory savings and performance. You can specify any unique sequence of characters here. To completely disable item compression, set this parameter to None.
+
+- `case_insensitive` (bool) controls whether casing is relevant or not. By default, ambre has this parameter set to
+TRUE. If you change it to FALSE - meaning that you differentiate between upper and lower case letters - be sure that you
+actually need it. Case insensitivity needs less memory and performs faster.
+
+Furthermore, it is always a good idea not to pass irrelevant data to ambre. You are probably not interested in data
+coming from technical fields such as "created_at", "is_deleted" etc. Removing/not passing such data will improve ambre's
 performance.
+
+Similarly, the shorter the item names are in your transactions, the better. Also, prefer short column names over longer ones when memory becomes an issue.
 
 In some cases you may also be able to group individual items to a group. Grouped items mean less items, and the less
 items you have, the faster is ambre because it needs to deal with less data then.

@@ -4,6 +4,7 @@ from ambre import Database
 
 from .testing_helpers import (
     get_wikipedia_database_consequent_bread,
+    get_wikipedia_database_consequent_bread_custom_input_alphabet,
     get_wikipedia_database_no_consequents,
     load_pandas_dataframe_from_csv,
     save_and_ensure_actual_result_vs_expected,
@@ -68,6 +69,12 @@ def test_frequent_itemsets_wikipedia_consequent_bread_several_minmax_conditions(
     actual_result = get_wikipedia_database_consequent_bread().derive_frequent_itemsets_pandas(
         min_occurrences=2, min_support=0.6, max_itemset_length=2
     )
+    save_and_ensure_actual_result_vs_expected(actual_result, request)
+
+
+def test_frequent_itemsets_wikipedia_custom_item_alphabet(request):
+    """Test the frequent itemset generation with custom item alphabet."""
+    actual_result = get_wikipedia_database_consequent_bread_custom_input_alphabet().derive_frequent_itemsets_pandas()
     save_and_ensure_actual_result_vs_expected(actual_result, request)
 
 

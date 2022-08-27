@@ -1,5 +1,6 @@
 """Helper methods for running tests."""
 import os
+import string
 
 import pandas as pd
 from ambre import Database
@@ -84,6 +85,21 @@ def get_wikipedia_database_consequent_bread():
     See https://en.wikipedia.org/wiki/Association_rule_learning for details.
     """
     result = Database(["bread"])
+    result.insert_transaction(["milk", "bread"])
+    result.insert_transaction(["butter"])
+    result.insert_transaction(["beer", "diapers"])
+    result.insert_transaction(["milk", "bread", "butter"])
+    result.insert_transaction(["bread"])
+    return result
+
+
+def get_wikipedia_database_consequent_bread_custom_input_alphabet():
+    """
+    Return a database populated with transactions from Wikipedia, using bread as consequent and custom item alphabet.
+
+    See https://en.wikipedia.org/wiki/Association_rule_learning for details.
+    """
+    result = Database(["bread"], item_alphabet=string.ascii_lowercase)
     result.insert_transaction(["milk", "bread"])
     result.insert_transaction(["butter"])
     result.insert_transaction(["beer", "diapers"])

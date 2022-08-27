@@ -4,34 +4,39 @@ from collections import deque
 
 from recordclass import dataobject
 
-from ambre.helpers.strings import decompress_string
+from ambre.helpers.strings import compress_string, decompress_string
 
 
 class ItemsetsTrie:
     """
-    A trie that stores information about the itemsets and corresponding subsets inserted into the database.
+    A trie that stores information about the itemsets and corresponding powersets inserted into the database.
 
-    Within the trie, consequents are always at the beginning of a path, with antecedents following. Consequents and
-    antecedents are sorted along the path to avoid multiple paths for the same itemset. For performance reasons,
-    there is no guarantee however that items are sorted among their siblings.
+    Within the trie, nodes are always sorted such that consequents come first, then followed by antecedents. Consequents
+    and antecedents are also sorted within their group.
 
-    Note: Intentionally using duplicate code here to facilitate a port to Rust later.
+    Use the .print() method to visualize the trie.
     """
 
     def __init__(
-        self, normalized_consequents, max_antecedents_length, item_separator_for_string_outputs, item_alphabet
+        self,
+        normalized_consequents,
+        compressed_consequents,
+        max_antecedents_length,
+        item_separator_for_string_outputs,
+        item_alphabet,
     ):
         """Init."""
         self.root_node = ItemsetNode("", None, self, None, {}, 0)
         self.normalized_consequents = normalized_consequents
+        self.compressed_consequents = compressed_consequents
         self.max_antecedents_length = max_antecedents_length
         self.item_separator_for_string_outputs = item_separator_for_string_outputs
         self.item_alphabet = item_alphabet
         self.number_transactions = 0
         self.number_nodes = 1
 
-    def insert_normalized_consequents_antecedents(self, consequents, antecedents):
-        """Insert the given normalized transaction into the trie."""
+    def insert_normalized_consequents_antecedents_compressed(self, consequents, antecedents):
+        """Insert the given normalized and compressed transaction into the trie."""
         # basic approach: for each node, add all items that follow that node in the itemset as children.
         #                 an itemset of size n leads to 2**n-1 nodes.
 
@@ -39,7 +44,6 @@ class ItemsetsTrie:
             (antecedent, False) for antecedent in antecedents
         ]
 
-        # option 1: more complex code without recursion
         stack = deque([(self.root_node, 0, 0)])  # node, start_index, antecedents_count
 
         def _create_or_update_child_node(item_plus_meta):
@@ -56,92 +60,8 @@ class ItemsetsTrie:
             index = 0
             deque(map(_create_or_update_child_node, itemset_plus_meta[start_index:]), maxlen=0)
 
-        # # option 2: easier to understand code but limited by Python recursion limit
-        # def _add_itemset_powerset_recursive(self, node, start_index, antecedents_count):
-        #     index = 0
-        #     for item_plus_meta in itemset_plus_meta[start_index:]:
-        #         child_node, _ = node.get_or_create_child(*item_plus_meta)
-        #         child_node.occurrences += 1
-        #         new_antecedents_count = antecedents_count + (child_node.is_consequent is False)
-        #         if (not self.max_antecedents_length) or (new_antecedents_count < self.max_antecedents_length):
-        #             _add_itemset_powerset_recursive(
-        #                 self,
-        #                 child_node,
-        #                 start_index + index + 1,
-        #                 new_antecedents_count,
-        #             )
-        #         index += 1
-
-        # _add_itemset_powerset_recursive(self, self.root_node, 0, 0)
-
         self.number_transactions += 1
 
-    def get_itemset_node(self, itemset):
-        """Get the itemset node from the trie which represents the specified itemset."""
-        if not itemset:
-            raise ValueError("Parameter 'itemset' is None or empty.")
-        node = self.root_node
-        for item in itemset:
-            if item in node.children:
-                node = node.children[item]
-            else:
-                raise ValueError(
-                    (
-                        f"Itemset '{itemset}' could not be found. Ensure that a corresponding itemset was inserted "
-                        f"before and that evtl. preprocessing transformations are considered."
-                    )
-                )
-        return node
-
-    def get_consequent_root_nodes(self):
-        """Return all children from the root node that are a consequent."""
-        return [node for node in list(self.root_node.children.values()) if node.is_consequent]
-
-    def get_all_consequent_nodes(self):
-        """Return all consequent nodes."""
-        result = []
-
-        def _recursive_trie_walkdown_breadth_first(nodes):
-            next_nodes = []
-            for current_node in nodes:
-                if current_node.is_consequent:
-                    result.append(current_node)
-                    next_nodes.extend(list(current_node.children.values()))
-            if next_nodes:
-                _recursive_trie_walkdown_breadth_first(next_nodes)
-
-        _recursive_trie_walkdown_breadth_first(self.get_consequent_root_nodes())
-        return result
-
-    def get_first_antecedent_after_consequents_nodes(self):
-        """Return all nodes which are the first antecedent after the consequent nodes."""
-        result = []
-
-        def _recursive_trie_walkdown_breadth_first(nodes):
-            next_nodes = []
-            for current_node in nodes:
-                if current_node.is_consequent:
-                    next_nodes.extend(list(current_node.children.values()))
-                else:
-                    result.append(current_node)
-            if next_nodes:
-                _recursive_trie_walkdown_breadth_first(next_nodes)
-
-        _recursive_trie_walkdown_breadth_first(self.get_consequent_root_nodes())
-        return result
-
-    def merge(self, itemsets_trie):
-        """Merge the given itemsets trie into this itemsets trie."""
-        source_itemsets_trie = itemsets_trie
-        target_itemsets_trie = self
-        stack = deque([(source_itemsets_trie.root_node, target_itemsets_trie.root_node)])
-        while len(stack) > 0:
-            source_node, target_node = stack.pop()
-            for source_child in source_node.children.values():
-                target_child, _ = target_node.get_or_create_child(source_child.item, source_child.is_consequent)
-                target_child.occurrences += source_child.occurrences
-                stack.append((source_child, target_child))
-        return self
 
     def print(self, to_string=False):
         """
@@ -166,7 +86,7 @@ class ItemsetsTrie:
                 current_node_itemset_length = current_node.itemset_length
                 indentation = 2 * (current_node_itemset_length - 1) * " "
                 edge = " └ " if current_node_itemset_length > 1 else ""
-                itemset = f"{'(' if current_node.is_consequent else ''}{current_node}{')' if current_node.is_consequent else ''}"
+                itemset_node_as_string = current_node.with_consequents_highlighted()
                 _our_own_print(
                     (
                         f"{current_node.occurrences}".rjust(11)
@@ -177,13 +97,10 @@ class ItemsetsTrie:
                         + " | "
                         + f"{current_node.lift:.2f}".rjust(6)
                         + " | "
-                        + f"{indentation}{edge}{itemset}"
+                        + f"{indentation}{edge}{itemset_node_as_string}"
                     )
                 )
-            for source_child in sorted(
-                current_node.children.values(),
-                reverse=True,
-            ):
+            for source_child in reversed(current_node.children.values()):
                 stack.append(source_child)
 
         _our_own_print(f"\nTotal number of transactions: {self.number_transactions}")
@@ -191,6 +108,93 @@ class ItemsetsTrie:
 
         if to_string:
             return "\n".join(result_lines)
+
+    def merge(self, itemsets_trie):
+        """Merge the given itemsets trie into this itemsets trie."""
+        source_itemsets_trie = itemsets_trie
+        target_itemsets_trie = self
+        stack = deque([(source_itemsets_trie.root_node, target_itemsets_trie.root_node)])
+        while len(stack) > 0:
+            source_node, target_node = stack.pop()
+            for source_child in source_node.children.values():
+                target_child, _ = target_node.get_or_create_child(
+                    source_child.item, source_child.is_consequent, item_is_compressed=True
+                )
+                target_child.occurrences += source_child.occurrences
+                stack.append((source_child, target_child))
+        return self
+
+    def walk_through_all_consequent_nodes_depth_first(self):
+        """Yield all consequent nodes, using depth-first search."""
+        result = []
+        stack = deque([self.root_node])
+        is_root_node = True
+        while len(stack) > 0:
+            current_node = stack.pop()
+            if not is_root_node:
+                if current_node.is_consequent:
+                    result.append(current_node)
+                    next_children = [
+                        child_node for child_node in current_node.children.values() if child_node.is_consequent
+                    ]
+            else:
+                next_children = [
+                    child_node for child_node in current_node.children.values() if child_node.is_consequent
+                ]
+            for child in reversed(next_children):
+                stack.append(child)
+            is_root_node = False
+        return result
+
+    def get_itemset_node_from_compressed(self, compressed_itemset):
+        """Get the itemset node from the trie representing the specified itemset (assuming compressed items)."""
+        if not compressed_itemset:
+            raise ValueError("Parameter 'compressed_itemset' is None or empty.")
+        node = self.root_node
+        for compressed_item in compressed_itemset:
+            if compressed_item in node.children:
+                node = node.children[compressed_item]
+            else:
+                uncompressed_itemset = [
+                    decompress_string(item, original_input_alphabet=self.item_alphabet) for item in compressed_itemset
+                ]
+                raise ValueError(
+                    (
+                        f"Cannot find node for the given itemset (uncompressed: {uncompressed_itemset}). Ensure that "
+                        f"the specified node is contained in the trie."
+                    )
+                )
+        return node
+
+    def get_itemset_node_from_uncompressed(self, uncompressed_itemset):
+        """Get the itemset node from the trie representing the specified itemset (assuming uncompressed items)."""
+        if not uncompressed_itemset:
+            raise ValueError("Parameter 'uncompressed_itemset' is None or empty.")
+        return self.get_itemset_node_from_compressed(
+            list(compress_string(item, input_alphabet=self.item_alphabet) for item in uncompressed_itemset)
+        )
+
+    def get_consequent_root_nodes(self):
+        """Return all children from the root node that are a consequent."""
+        return [node for node in list(self.root_node.children.values()) if node.is_consequent]
+
+    def get_first_antecedent_after_consequents_nodes(self):
+        """Return all nodes which are the first antecedent after the consequent nodes."""
+        # TODO: refactor to depth-first search
+        result = []
+
+        def _recursive_trie_walkdown_breadth_first(nodes):
+            next_nodes = []
+            for current_node in nodes:
+                if current_node.is_consequent:
+                    next_nodes.extend(list(current_node.children.values()))
+                else:
+                    result.append(current_node)
+            if next_nodes:
+                _recursive_trie_walkdown_breadth_first(next_nodes)
+
+        _recursive_trie_walkdown_breadth_first(self.get_consequent_root_nodes())
+        return result
 
 
 class ItemsetNode(dataobject):
@@ -214,27 +218,58 @@ class ItemsetNode(dataobject):
 
     def __repr__(self):
         """More comfortable string representation of the object."""
-        return self.itemsets_trie.item_separator_for_string_outputs.join(self.itemset_sorted_list)
+        return self.itemsets_trie.item_separator_for_string_outputs.join(self.itemset_sorted_list_uncompressed)
 
-    def get_or_create_child(self, item, is_consequent):
+    def with_consequents_highlighted(self):
+        """Return a string representation of the node with all consequents highlighted."""
+        decompressed_items = [
+            f"{'(' if node.is_consequent else ''}"
+            f"{decompress_string(node.item, original_input_alphabet=self.itemsets_trie.item_alphabet)}"
+            f"{')' if node.is_consequent else ''}"
+            for node in self.itemset_nodes
+        ]
+        return self.itemsets_trie.item_separator_for_string_outputs.join(decompressed_items)
+
+    def get_or_create_child(self, item, is_consequent, item_is_compressed=False):
         """Get or create a child node."""
+        compressed_item = (
+            compress_string(item, input_alphabet=self.itemsets_trie.item_alphabet) if not item_is_compressed else item
+        )
+        child_node = self.children.get(compressed_item, None)
         created_new_child = False
-        child_node = self.children.get(item, None)
         if child_node is None:
-            new_child_node = ItemsetNode(item, self, self.itemsets_trie, is_consequent, {}, 0)
-            self.children[item] = new_child_node
+            new_child_node = ItemsetNode(compressed_item, self, self.itemsets_trie, is_consequent, {}, 0)
+            item_alphabet = self.itemsets_trie.item_alphabet
+            self.children = {
+                key: value
+                for key, value in sorted(
+                    list(self.children.items()) + [(compressed_item, new_child_node)],
+                    key=lambda t: (
+                        not t[1].is_consequent,
+                        decompress_string(t[0], original_input_alphabet=item_alphabet),
+                    ),
+                )
+            }
             self.itemsets_trie.number_nodes += 1
             child_node = new_child_node
             created_new_child = True
         return child_node, created_new_child
 
     @property
-    def itemset_sorted_list(self):
-        """Return itemset as sorted list."""
+    def itemset_sorted_list_uncompressed(self):
+        """Return itemset represented by this node, sorted by uncompressed items with consequences first."""
+        return [
+            decompress_string(node.item, original_input_alphabet=self.itemsets_trie.item_alphabet)
+            for node in self.itemset_nodes
+        ]
+
+    @property
+    def itemset_nodes(self):
+        """Return a sorted list of all nodes leading to the itemset (consequents first)."""
         result = []
         iterated_node = self
         while iterated_node.parent_node is not None:
-            result = [iterated_node.item] + result
+            result = [iterated_node] + result
             iterated_node = iterated_node.parent_node
         return result
 
@@ -249,30 +284,30 @@ class ItemsetNode(dataobject):
         return result
 
     @property
-    def consequents(self):
+    def consequents_compressed(self):
         """Return the itemset's consequents."""
-        consequents, _ = self.consequents_antecedents
-        return consequents
+        result, _ = self.consequents_antecedents_compressed
+        return result
 
     @property
-    def antecedents(self):
+    def antecedents_compressed(self):
         """Return the itemset's antecedents."""
-        _, antecedents = self.consequents_antecedents
-        return antecedents
+        _, result = self.consequents_antecedents_compressed
+        return result
 
     @property
-    def consequents_antecedents(self):
+    def consequents_antecedents_compressed(self):
         """Return the itemset's consequents and antecedents."""
-        antecedents = []
-        consequents = []
+        antecedents_compressed = []
+        consequents_compressed = []
         iterated_node = self
         while iterated_node.parent_node is not None:
             if iterated_node.is_consequent:
-                consequents.insert(0, iterated_node.item)
+                consequents_compressed.insert(0, iterated_node.item)
             else:
-                antecedents.insert(0, iterated_node.item)
+                antecedents_compressed.insert(0, iterated_node.item)
             iterated_node = iterated_node.parent_node
-        return consequents, antecedents
+        return consequents_compressed, antecedents_compressed
 
     @property
     def support(self):
@@ -282,19 +317,18 @@ class ItemsetNode(dataobject):
     @property
     def confidence(self):
         """Return the itemset's confidence."""
-        # return self.support / self.itemsets_trie.get_itemset_node(self.antecedents).support
-        antecedents = self.antecedents
-        if self.antecedents:
-            return self.support / self.itemsets_trie.get_itemset_node(antecedents).support
+        antecedents_compressed = self.antecedents_compressed
+        if antecedents_compressed:
+            return self.support / self.itemsets_trie.get_itemset_node_from_compressed(antecedents_compressed).support
         return 1
 
     @property
     def lift(self):
         """Return the itemset's confidence."""
-        consequents, antecedents = self.consequents_antecedents
-        if self.antecedents and self.consequents:
+        consequents_compressed, antecedents_compressed = self.consequents_antecedents_compressed
+        if antecedents_compressed and consequents_compressed:
             return self.support / (
-                self.itemsets_trie.get_itemset_node(antecedents).support
-                * self.itemsets_trie.get_itemset_node(consequents).support
+                self.itemsets_trie.get_itemset_node_from_compressed(antecedents_compressed).support
+                * self.itemsets_trie.get_itemset_node_from_compressed(consequents_compressed).support
             )
         return 1

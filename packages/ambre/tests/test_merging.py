@@ -24,16 +24,16 @@ def test_merging_can_merge_database_pair():
         """
 Occurrences | Support | Confidence | Lift   | Path
 --------------------------------------------------------------------------------
+          4 |    0.57 |       1.00 |   1.00 | (bread)
+          3 |    0.43 |       1.00 |   1.00 |    └ (bread) ∪ (milk)
+          1 |    0.14 |       0.33 |   0.78 |      └ (bread) ∪ (milk) ∪ butter
+          1 |    0.14 |       0.33 |   0.58 |    └ (bread) ∪ butter
+          3 |    0.43 |       1.00 |   1.00 | (milk)
+          1 |    0.14 |       0.33 |   0.78 |    └ (milk) ∪ butter
           1 |    0.14 |       1.00 |   1.00 | beer
           1 |    0.14 |       1.00 |   1.00 |    └ beer ∪ diapers
-          4 |    0.57 |       1.00 |   1.00 | (bread)
-          1 |    0.14 |       0.33 |   0.58 |    └ bread ∪ butter
-          3 |    0.43 |       1.00 |   1.00 |    └ (bread ∪ milk)
-          1 |    0.14 |       0.33 |   0.78 |      └ bread ∪ milk ∪ butter
           3 |    0.43 |       1.00 |   1.00 | butter
           1 |    0.14 |       1.00 |   1.00 | diapers
-          3 |    0.43 |       1.00 |   1.00 | (milk)
-          1 |    0.14 |       0.33 |   0.78 |    └ milk ∪ butter
 """.strip()
         + "\n" * 2
         + """
@@ -41,7 +41,6 @@ Total number of transactions: 7
 Total number of nodes (incl. root node): 11
 """.strip()
     )
-
     assert merged_database.itemsets_trie.print(to_string=True) == expected_itemsets_trie_string
 
 

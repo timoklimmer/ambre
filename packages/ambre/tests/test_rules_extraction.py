@@ -11,6 +11,7 @@ from .testing_helpers import (
     get_titanic_survived_1_database,
     get_wikipedia_database_consequent_bread,
     get_wikipedia_database_consequent_bread_and_milk,
+    get_wikipedia_database_consequent_bread_custom_input_alphabet,
     get_wikipedia_database_no_consequents,
     load_pandas_dataframe_from_csv,
     save_and_ensure_actual_result_vs_expected,
@@ -51,7 +52,7 @@ def test_rule_extraction_wikipedia_consequent_bread_non_antecedents_rules(reques
     save_and_ensure_actual_result_vs_expected(actual_result, request)
 
 
-def test_rule_extraction_throws_exception_without_consequent():
+def test_rule_extraction_wikipedia_throws_exception_without_consequent():
     """Test if the rule generation throws an exception if no consequent was specified before inserting transactions."""
     database = get_wikipedia_database_no_consequents()
     with pytest.raises(ValueError, match=r"Cannot extract rules because no consequents are defined."):
@@ -68,6 +69,13 @@ def test_rule_extraction_wikipedia_common_sense_rule(request):
     database.insert_common_sense_rule(["milk"], ["bread"])
     database.insert_common_sense_rule(["diapers"], ["beer"])
 
+    actual_result = database.derive_rules_pandas()
+    save_and_ensure_actual_result_vs_expected(actual_result, request)
+
+
+def test_rule_extraction_wikipedia_custom_item_alphabet(request):
+    """Test the rule extraction with custom item alphabet."""
+    database = get_wikipedia_database_consequent_bread_custom_input_alphabet()
     actual_result = database.derive_rules_pandas()
     save_and_ensure_actual_result_vs_expected(actual_result, request)
 

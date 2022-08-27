@@ -12,13 +12,12 @@ from collections import deque
 from io import BytesIO
 
 import joblib
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
 from ambre.common_sense_rule import CommonSenseRule
 from ambre.itemsets_trie import ItemsetsTrie
-from ambre.preprocessor import Preprocessor
+from ambre.prepostprocessing import PrePostProcessor
 from ambre.settings import Settings
 from ambre.versions import AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION, AMBRE_PACKAGE_VERSION
 
@@ -60,9 +59,10 @@ class Database:
             omit_column_names,
             item_alphabet=item_alphabet,
         )
-        self.preprocessor = Preprocessor(self.settings)
+        self.prepostprocessor = PrePostProcessor(self.settings)
         self.itemsets_trie = ItemsetsTrie(
-            self.preprocessor.normalized_consequents,
+            self.prepostprocessor.normalized_consequents,
+            self.prepostprocessor.compressed_consequents,
             self.settings.max_antecedents_length,
             self.settings.item_separator_for_string_outputs,
             self.settings.item_alphabet,
@@ -71,10 +71,6 @@ class Database:
 
     def insert_from_pandas_dataframe_rows(self, pandas_df, sampling_ratio=1, input_columns=None, show_progress=True):
         """Interpret each row in the given pandas dataframe as transaction and insert those."""
-        if not 0 <= sampling_ratio <= 1:
-            raise ValueError(
-                f"Parameter 'sampling_ratio' needs to be between 0 and 1. Specified value is: {sampling_ratio}."
-            )
         columns = input_columns if input_columns else pandas_df.columns
         self.insert_transactions(
             (
@@ -96,7 +92,7 @@ class Database:
         """Insert the given transactions, optionally sampling to enable larger datasets."""
         if not 0 <= sampling_ratio <= 1:
             raise ValueError(
-                f"Parameter 'sampling_ratio' needs to be between 0 and 1. Specified value is: {sampling_ratio}."
+                f"Parameter 'sampling_ratio' must be between 0 and 1. Specified value is: {sampling_ratio}."
             )
         transaction_iterator = tqdm(transactions) if show_progress else transactions
         if sampling_ratio == 1:
@@ -113,8 +109,10 @@ class Database:
 
     def insert_transaction(self, transaction):
         """Insert the given transaction."""
-        self.itemsets_trie.insert_normalized_consequents_antecedents(
-            *self.preprocessor.extract_normalized_consequents_antecedents(transaction)
+        self.itemsets_trie.insert_normalized_consequents_antecedents_compressed(
+            *self.prepostprocessor.extract_consequents_antecedents_compressed_from_uncompressed(
+                self.prepostprocessor.normalize_uncompressed_itemset(transaction, sort_result=False), sort_result=True
+            )
         )
 
     @property
@@ -148,7 +146,10 @@ class Database:
                 list(group)[-1]
                 for _, group in itertools.groupby(
                     self.common_sense_rules,
-                    lambda common_sense_rule: (common_sense_rule.antecedents, common_sense_rule.consequents),
+                    lambda common_sense_rule: (
+                        common_sense_rule.antecedents_compressed,
+                        common_sense_rule.consequents_compressed,
+                    ),
                 )
             )
         )
@@ -160,8 +161,10 @@ class Database:
             if not any(
                 (
                     lower_common_sense_rule.confidence == common_sense_rule.confidence
-                    and lower_common_sense_rule.consequents == common_sense_rule.consequents
-                    and set(lower_common_sense_rule.antecedents).issubset(common_sense_rule.antecedents)
+                    and lower_common_sense_rule.consequents_compressed == common_sense_rule.consequents_compressed
+                    and set(lower_common_sense_rule.antecedents_compressed).issubset(
+                        common_sense_rule.antecedents_compressed
+                    )
                     for lower_common_sense_rule in self.common_sense_rules[:index]
                 )
             ):
@@ -248,22 +251,21 @@ class Database:
         omit_column_names_in_output=False,
         show_progress_bar=False,
     ):
-        """Derive the frequent itemsets from the internally assembled trie and return them as a dict object."""
-
-        def _recursive_trie_walkdown_depth_first(node, level_number):
-            result = {"itemset": [], "occurrences": [], "support": [], "itemset_length": []}
-            sorted_itemset = self.preprocessor.sort_itemset_consequents_first(node.children.keys())
-            if show_progress_bar and level_number == 0:
-                sorted_itemset = tqdm(sorted_itemset)
-            for child_item in sorted_itemset:
-                child_node = node.children[child_item]
-                if level_number == 0 and filter_to_consequent_itemsets_only and not child_node.consequents:
-                    # if we reach here, we have passed all consequents (because consequents are iterated first)
-                    # => no need to continue => break the recursion
-                    break
-                itemset_length = child_node.itemset_length
-                occurrences = child_node.occurrences
-                support = child_node.support
+        """Derive the frequent itemsets from the internally assembled trie and return them in a dict object."""
+        # walk down the tree (depth-first) and collect the result
+        result = {"itemset": [], "occurrences": [], "support": [], "itemset_length": []}
+        root_node = self.itemsets_trie.root_node
+        consequent_root_nodes = self.itemsets_trie.get_consequent_root_nodes()
+        iterations = len(consequent_root_nodes) if filter_to_consequent_itemsets_only else len(root_node.children)
+        progress_bar = tqdm(total=iterations) if show_progress_bar else None
+        stack = deque([root_node])
+        is_root_node = True
+        while len(stack) > 0:
+            current_node = stack.pop()
+            if not is_root_node:
+                itemset_length = current_node.itemset_length
+                occurrences = current_node.occurrences
+                support = current_node.support
                 if (
                     itemset_length >= min_itemset_length
                     and ((max_itemset_length is None) or (itemset_length <= max_itemset_length))
@@ -271,20 +273,27 @@ class Database:
                     and (occurrences >= min_occurrences)
                     and (min_support <= support <= max_support)
                 ):
-                    itemset = child_node.itemset_sorted_list
+                    itemset = current_node.itemset_sorted_list_uncompressed
                     if not self.settings.omit_column_names and omit_column_names_in_output:
-                        itemset = self.preprocessor.remove_column_names_from_itemset(itemset)
+                        itemset = self.prepostprocessor.remove_column_names_from_uncompressed_itemset(itemset)
                     result["itemset"].append(itemset)
-                    result["occurrences"].append(child_node.occurrences)
-                    result["support"].append(child_node.support)
-                    result["itemset_length"].append(child_node.itemset_length)
-
-                result_from_recursion = _recursive_trie_walkdown_depth_first(child_node, level_number + 1)
-                for column, column_value in result_from_recursion.items():
-                    result[column].extend(column_value)
-            return result
-
-        return _recursive_trie_walkdown_depth_first(self.itemsets_trie.root_node, 0)
+                    result["occurrences"].append(current_node.occurrences)
+                    result["support"].append(current_node.support)
+                    result["itemset_length"].append(current_node.itemset_length)
+                if progress_bar and current_node.parent_node == root_node:
+                    progress_bar.update(1)
+            next_children = (
+                current_node.children.values()
+                if not (is_root_node and filter_to_consequent_itemsets_only)
+                else consequent_root_nodes
+            )
+            for child in reversed(next_children):
+                stack.append(child)
+            is_root_node = False
+        if progress_bar:
+            progress_bar.close()
+        # return result
+        return result
 
     def derive_frequent_itemsets_pandas(self, *args, **kwargs):
         """
@@ -355,7 +364,9 @@ class Database:
         }
 
         rules_temp = {
-            frozenset(common_sense_rule.consequents + common_sense_rule.antecedents): common_sense_rule.confidence
+            frozenset(
+                common_sense_rule.consequents_compressed + common_sense_rule.antecedents_compressed
+            ): common_sense_rule.confidence
             for common_sense_rule in self.common_sense_rules
         }
 
@@ -407,8 +418,8 @@ class Database:
                             and ((max_occurrences is None) or (current_node_occurrences <= max_occurrences))
                             and (current_node_occurrences >= min_occurrences)
                         ):
-                            antecedents = current_node.antecedents
-                            consequents = current_node.consequents
+                            antecedents = current_node.antecedents_compressed
+                            consequents = current_node.consequents_compressed
 
                             # condition: there is no rule yet which predicts the same consequents with a subset of the
                             #            current rule's antecedents and the same confidence (within tolerances)
@@ -423,14 +434,20 @@ class Database:
                                 confidence_tolerance,
                             ):
                                 # add rule to result
-                                consequents, antecedents = current_node.consequents_antecedents
-                                consequents_to_append, antecedents_to_append = consequents, antecedents
+                                consequents, antecedents = current_node.consequents_antecedents_compressed
+                                consequents_to_append, antecedents_to_append = self.prepostprocessor.decompress_itemset(
+                                    consequents
+                                ), self.prepostprocessor.decompress_itemset(antecedents)
                                 if not self.settings.omit_column_names and omit_column_names_in_output:
-                                    consequents_to_append = self.preprocessor.remove_column_names_from_itemset(
-                                        consequents_to_append
+                                    consequents_to_append = (
+                                        self.prepostprocessor.remove_column_names_from_uncompressed_itemset(
+                                            consequents_to_append
+                                        )
                                     )
-                                    antecedents_to_append = self.preprocessor.remove_column_names_from_itemset(
-                                        antecedents_to_append
+                                    antecedents_to_append = (
+                                        self.prepostprocessor.remove_column_names_from_uncompressed_itemset(
+                                            antecedents_to_append
+                                        )
                                     )
                                 result["antecedents"].append(antecedents_to_append)
                                 result["consequents"].append(consequents_to_append)
@@ -456,9 +473,9 @@ class Database:
                     next_nodes, current_node_antecedent_size + 1, recursion_level + 1
                 )
 
-        # add the non-antecedent consequences to the result
+        # add the non-antecedent consequences to the result if desired (also considering several config settings)
         if non_antecedents_rules:
-            for consequent_node in self.itemsets_trie.get_all_consequent_nodes():
+            for consequent_node in self.itemsets_trie.walk_through_all_consequent_nodes_depth_first():
                 confidence = consequent_node.confidence
                 lift = consequent_node.lift
                 occurrences = consequent_node.occurrences
@@ -472,7 +489,7 @@ class Database:
                     and (occurrences >= min_occurrences)
                 ):
                     result["antecedents"].append("")
-                    result["consequents"].append(consequent_node.itemset_sorted_list)
+                    result["consequents"].append(consequent_node.itemset_sorted_list_uncompressed)
                     result["confidence"].append(consequent_node.confidence)
                     result["lift"].append(consequent_node.lift)
                     result["occurrences"].append(consequent_node.occurrences)
@@ -598,28 +615,3 @@ class Database:
 
         # return the result
         return target_database
-
-    @staticmethod
-    def merge_rules_pandas(ruleset_df_1, ruleset_df_2):
-        """
-        Merge two pandas dataframes containing rules into a single dataframe (to enable parallelization).
-
-        Note: Metrics for duplicate antecedents => consequents rules are aggregated into single rules by using a
-              weighted average function, with using the occurrences as weight.
-        """
-        concatenated_df = pd.concat([ruleset_df_1, ruleset_df_2], ignore_index=True)
-
-        def weighted_average(weight_column):
-            return lambda x: np.ma.average(x, weights=concatenated_df.loc[x.index, weight_column])
-
-        result = concatenated_df.groupby(["antecedents", "consequents"]).agg(
-            {
-                "confidence": weighted_average("occurrences"),
-                "lift": weighted_average("occurrences"),
-                "occurrences": "sum",
-                "support": weighted_average("occurrences"),
-                "antecedents_length": "first",
-            }
-        )
-        result.reset_index(level=result.index.name, inplace=True)
-        return result

@@ -11,8 +11,14 @@ class CommonSenseRule:
 
     def __init__(self, database, antecedents, consequents, confidence=1):
         """Init."""
-        self.antecedents = database.preprocessor.normalize_itemset(antecedents)
-        self.consequents = database.preprocessor.normalize_itemset(consequents)
+        self.antecedents_normalized = database.prepostprocessor.normalize_uncompressed_itemset(
+            antecedents, sort_result=True
+        )
+        self.consequents_normalized = database.prepostprocessor.normalize_uncompressed_itemset(
+            consequents, sort_result=True
+        )
+        self.antecedents_compressed = database.prepostprocessor.compress_itemset(self.antecedents_normalized)
+        self.consequents_compressed = database.prepostprocessor.compress_itemset(self.consequents_normalized)
         self.confidence = confidence
         self.database = database
 
@@ -23,8 +29,8 @@ class CommonSenseRule:
         else:
             item_separator_for_string_outputs = self.database.settings.item_separator_for_string_outputs
         return (
-            f"{item_separator_for_string_outputs.join(self.antecedents)} => "
-            f"{item_separator_for_string_outputs.join(self.consequents)} "
+            f"{item_separator_for_string_outputs.join(self.antecedents_normalized)} => "
+            f"{item_separator_for_string_outputs.join(self.consequents_normalized)} "
             f"({self.confidence})"
         )
 
@@ -33,8 +39,8 @@ class CommonSenseRule:
         if not isinstance(other, CommonSenseRule):
             return False
         return (
-            self.antecedents == other.antecedents
-            and self.consequents == other.consequents
+            self.antecedents_normalized == other.antecedents_normalized
+            and self.consequents_normalized == other.consequents_normalized
             and self.confidence == other.confidence
         )
 
@@ -44,36 +50,38 @@ class CommonSenseRule:
 
     def __lt__(self, other):
         """Check if the object is lower than the given object."""
-        return (self.antecedents, self.consequents, self.confidence) < (
-            other.antecedents,
-            other.consequents,
+        return (self.antecedents_normalized, self.consequents_normalized, self.confidence) < (
+            other.antecedents_normalized,
+            other.consequents_normalized,
             other.confidence,
         )
 
     def __le__(self, other):
         """Check if the object is lower than or equal to the given object."""
-        return (self.antecedents, self.consequents, self.confidence) <= (
-            other.antecedents,
-            other.consequents,
+        return (self.antecedents_normalized, self.consequents_normalized, self.confidence) <= (
+            other.antecedents_normalized,
+            other.consequents_normalized,
             other.confidence,
         )
 
     def __gt__(self, other):
         """Check if the object is greater than the given object."""
-        return (self.antecedents, self.consequents, self.confidence) > (
-            other.antecedents,
-            other.consequents,
+        return (self.antecedents_normalized, self.consequents_normalized, self.confidence) > (
+            other.antecedents_normalized,
+            other.consequents_normalized,
             other.confidence,
         )
 
     def __ge__(self, other):
         """Check if the object is greater than or equal to the given object."""
-        return (self.antecedents, self.consequents, self.confidence) >= (
-            other.antecedents,
-            other.consequents,
+        return (self.antecedents_normalized, self.consequents_normalized, self.confidence) >= (
+            other.antecedents_normalized,
+            other.consequents_normalized,
             other.confidence,
         )
 
     def __hash__(self):
         """Return a hash value for this instance."""
-        return hash((chr(0).join(self.antecedents), chr(0).join(self.consequents), self.confidence))
+        return hash(
+            (chr(0).join(self.antecedents_normalized), chr(0).join(self.consequents_normalized), self.confidence)
+        )

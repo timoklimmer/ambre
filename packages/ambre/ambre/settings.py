@@ -17,7 +17,7 @@ class Settings:
         item_alphabet=string.printable
     ):
         """Init."""
-        self.consequents = consequents
+        self.consequents = sorted(set(consequents))
         self.normalize_whitespace = normalize_whitespace
         self.case_insensitive = case_insensitive
         self.max_antecedents_length = max_antecedents_length

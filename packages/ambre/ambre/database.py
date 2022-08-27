@@ -273,7 +273,7 @@ class Database:
                     and (occurrences >= min_occurrences)
                     and (min_support <= support <= max_support)
                 ):
-                    itemset = current_node.itemset_sorted_list_uncompressed
+                    itemset = current_node.itemset_uncompressed_items_sorted
                     if not self.settings.omit_column_names and omit_column_names_in_output:
                         itemset = self.prepostprocessor.remove_column_names_from_uncompressed_itemset(itemset)
                     result["itemset"].append(itemset)
@@ -489,7 +489,7 @@ class Database:
                     and (occurrences >= min_occurrences)
                 ):
                     result["antecedents"].append("")
-                    result["consequents"].append(consequent_node.itemset_sorted_list_uncompressed)
+                    result["consequents"].append(consequent_node.itemset_uncompressed_items_sorted)
                     result["confidence"].append(consequent_node.confidence)
                     result["lift"].append(consequent_node.lift)
                     result["occurrences"].append(consequent_node.occurrences)

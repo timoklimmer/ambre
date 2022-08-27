@@ -9,10 +9,14 @@ from ambre.helpers.strings import compress_string, decompress_string
 
 class ItemsetsTrie:
     """
-    A trie that stores information about the itemsets and corresponding powersets inserted into the database.
+    A trie that stores the itemsets and corresponding powersets inserted into the database.
 
     Within the trie, nodes are always sorted such that consequents come first, then followed by antecedents. Consequents
     and antecedents are also sorted within their group.
+
+    For memory optimization, nodes don't store the full item names. Instead, a string compression/decompression is
+    applied, based on an alphabet allowing/disallowing characters in item's names. The compression does not impact
+    sorting. Nodes are always sorted as if there was no compression at all.
 
     Use the .print() method to visualize the trie.
     """
@@ -61,7 +65,6 @@ class ItemsetsTrie:
             deque(map(_create_or_update_child_node, itemset_plus_meta[start_index:]), maxlen=0)
 
         self.number_transactions += 1
-
 
     def print(self, to_string=False):
         """
@@ -118,7 +121,7 @@ class ItemsetsTrie:
             source_node, target_node = stack.pop()
             for source_child in source_node.children.values():
                 target_child, _ = target_node.get_or_create_child(
-                    source_child.item, source_child.is_consequent, item_is_compressed=True
+                    source_child.compressed_item, source_child.is_consequent, item_is_compressed=True
                 )
                 target_child.occurrences += source_child.occurrences
                 stack.append((source_child, target_child))
@@ -200,16 +203,16 @@ class ItemsetsTrie:
 class ItemsetNode(dataobject):
     """An itemset within an itemset trie."""
 
-    __fields__ = "item", "parent_node", "itemsets_trie", "is_consequent", "children", "occurrences"
+    __fields__ = "compressed_item", "parent_node", "itemsets_trie", "is_consequent", "children", "occurrences"
     __options__ = {"fast_new": True}
 
-    def __init__(self, item, parent_node, itemsets_trie, is_consequent, children, occurrences):
+    def __init__(self, compressed_item, parent_node, itemsets_trie, is_consequent, children, occurrences):
         """
         Init.
 
         Parameter 'children' should be a dict with items as keys and values as nodes.
         """
-        self.item: str = item
+        self.compressed_item: str = compressed_item
         self.children: dict = children
         self.parent_node: ItemsetNode = parent_node
         self.itemsets_trie: ItemsetsTrie = itemsets_trie
@@ -218,15 +221,15 @@ class ItemsetNode(dataobject):
 
     def __repr__(self):
         """More comfortable string representation of the object."""
-        return self.itemsets_trie.item_separator_for_string_outputs.join(self.itemset_sorted_list_uncompressed)
+        return self.itemsets_trie.item_separator_for_string_outputs.join(self.itemset_uncompressed_items_sorted)
 
     def with_consequents_highlighted(self):
         """Return a string representation of the node with all consequents highlighted."""
         decompressed_items = [
             f"{'(' if node.is_consequent else ''}"
-            f"{decompress_string(node.item, original_input_alphabet=self.itemsets_trie.item_alphabet)}"
+            f"{decompress_string(node.compressed_item, original_input_alphabet=self.itemsets_trie.item_alphabet)}"
             f"{')' if node.is_consequent else ''}"
-            for node in self.itemset_nodes
+            for node in self.itemset_nodes_sorted
         ]
         return self.itemsets_trie.item_separator_for_string_outputs.join(decompressed_items)
 
@@ -240,38 +243,38 @@ class ItemsetNode(dataobject):
         if child_node is None:
             new_child_node = ItemsetNode(compressed_item, self, self.itemsets_trie, is_consequent, {}, 0)
             item_alphabet = self.itemsets_trie.item_alphabet
-            self.children = {
-                key: value
-                for key, value in sorted(
+            # intentionally not using dict comprehension here for performance reasons
+            self.children = dict(
+                sorted(
                     list(self.children.items()) + [(compressed_item, new_child_node)],
                     key=lambda t: (
                         not t[1].is_consequent,
                         decompress_string(t[0], original_input_alphabet=item_alphabet),
                     ),
                 )
-            }
+            )
             self.itemsets_trie.number_nodes += 1
             child_node = new_child_node
             created_new_child = True
         return child_node, created_new_child
 
     @property
-    def itemset_sorted_list_uncompressed(self):
-        """Return itemset represented by this node, sorted by uncompressed items with consequences first."""
-        return [
-            decompress_string(node.item, original_input_alphabet=self.itemsets_trie.item_alphabet)
-            for node in self.itemset_nodes
-        ]
-
-    @property
-    def itemset_nodes(self):
-        """Return a sorted list of all nodes leading to the itemset (consequents first)."""
+    def itemset_nodes_sorted(self):
+        """Return a sorted list of the itemset's nodes (consequents first, items sorted within their groups)."""
         result = []
         iterated_node = self
         while iterated_node.parent_node is not None:
             result = [iterated_node] + result
             iterated_node = iterated_node.parent_node
         return result
+
+    @property
+    def itemset_uncompressed_items_sorted(self):
+        """Return itemset represented by this node, sorted by uncompressed items with consequences first."""
+        return [
+            decompress_string(node.compressed_item, original_input_alphabet=self.itemsets_trie.item_alphabet)
+            for node in self.itemset_nodes_sorted
+        ]
 
     @property
     def itemset_length(self):
@@ -303,9 +306,9 @@ class ItemsetNode(dataobject):
         iterated_node = self
         while iterated_node.parent_node is not None:
             if iterated_node.is_consequent:
-                consequents_compressed.insert(0, iterated_node.item)
+                consequents_compressed.insert(0, iterated_node.compressed_item)
             else:
-                antecedents_compressed.insert(0, iterated_node.item)
+                antecedents_compressed.insert(0, iterated_node.compressed_item)
             iterated_node = iterated_node.parent_node
         return consequents_compressed, antecedents_compressed
 

@@ -361,6 +361,7 @@ class Database:
             "occurrences": [],
             "support": [],
             "antecedents_length": [],
+            "consequents_length": [],
         }
 
         rules_temp = {
@@ -436,9 +437,8 @@ class Database:
                                 confidence_tolerance,
                             ):
                                 # add rule to result
-                                consequents_to_append, antecedents_to_append = self.prepostprocessor.decompress_itemset(
-                                    consequents_compressed
-                                ), self.prepostprocessor.decompress_itemset(antecedents_compressed)
+                                consequents_to_append = self.prepostprocessor.decompress_itemset(consequents_compressed)
+                                antecedents_to_append = self.prepostprocessor.decompress_itemset(antecedents_compressed)
                                 if not self.settings.omit_column_names and omit_column_names_in_output:
                                     consequents_to_append = (
                                         self.prepostprocessor.remove_column_names_from_uncompressed_itemset(
@@ -457,6 +457,7 @@ class Database:
                                 result["occurrences"].append(current_node_occurrences)
                                 result["support"].append(current_node_support)
                                 result["antecedents_length"].append(current_node_antecedent_size)
+                                result["consequents_length"].append(len(consequents_to_append))
 
                                 # add rule to temp rules to avoid redundant rules
                                 rules_temp[
@@ -498,6 +499,7 @@ class Database:
                     result["occurrences"].append(consequent_node.occurrences)
                     result["support"].append(consequent_node.support)
                     result["antecedents_length"].append(0)
+                    result["consequents_length"].append(len(consequent_node.consequents_compressed))
 
         # use a recursive function to compile the result, starting at the first antecedent nodes in the itemset trie
         _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(

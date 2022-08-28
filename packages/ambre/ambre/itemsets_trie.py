@@ -77,7 +77,7 @@ class ItemsetsTrie:
                     )
                 )
 
-        self.visit_itemsets_depth_first(_print_node_info)
+        self.visit_itemset_nodes_depth_first(_print_node_info)
 
         _our_own_print(f"\nTotal number of transactions: {self.number_transactions}")
         _our_own_print(f"Total number of nodes (incl. root node): {self.number_nodes}")
@@ -114,7 +114,7 @@ class ItemsetsTrie:
             list(compress_string(item, input_alphabet=self.item_alphabet) for item in uncompressed_itemset)
         )
 
-    def visit_itemsets_depth_first(
+    def visit_itemset_nodes_depth_first(
         self, visitor_function, only_with_consequents=False, show_progress_bar=False, progress_bar_text=None
     ):
         """
@@ -143,7 +143,8 @@ class ItemsetsTrie:
                 next_action = "next_node"
                 if node != self.root_node:
                     next_action = visitor_function(node)
-                    progress_bar.update(1)
+                    if progress_bar:
+                        progress_bar.update(1)
                 if next_action == "stop":
                     if progress_bar:
                         progress_bar.update(progress_bar.total - progress_bar.n)
@@ -202,7 +203,7 @@ class ItemsetsTrie:
                 return "skip_children"
             return "next_node"
 
-        self.visit_itemsets_depth_first(_append_if_first_antecedent, only_with_consequents=True)
+        self.visit_itemset_nodes_depth_first(_append_if_first_antecedent, only_with_consequents=True)
         return result
 
     def insert_normalized_consequents_antecedents_compressed(self, consequents, antecedents):
@@ -269,7 +270,7 @@ class ItemsetNode(dataobject):
 
     def __repr__(self):
         """More comfortable string representation of the object."""
-        return self.itemsets_trie.item_separator_for_string_outputs.join(self.itemset_uncompressed_items_sorted)
+        return self.itemsets_trie.item_separator_for_string_outputs.join(self.itemset_items_uncompressed_sorted)
 
     def with_consequents_highlighted(self):
         """Return a string representation of the node with all consequents highlighted."""
@@ -315,7 +316,7 @@ class ItemsetNode(dataobject):
         return result
 
     @property
-    def itemset_uncompressed_items_sorted(self):
+    def itemset_items_uncompressed_sorted(self):
         """Return itemset represented by this node, sorted by uncompressed items with consequences first."""
         return [
             decompress_string(node.compressed_item, original_input_alphabet=self.itemsets_trie.item_alphabet)

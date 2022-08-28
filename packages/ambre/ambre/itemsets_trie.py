@@ -3,6 +3,7 @@
 from collections import deque
 
 from recordclass import dataobject
+from tqdm import tqdm
 
 from ambre.helpers.strings import compress_string, decompress_string
 
@@ -113,7 +114,9 @@ class ItemsetsTrie:
             list(compress_string(item, input_alphabet=self.item_alphabet) for item in uncompressed_itemset)
         )
 
-    def visit_itemsets_depth_first(self, visitor_function, only_with_consequents=False):
+    def visit_itemsets_depth_first(
+        self, visitor_function, only_with_consequents=False, show_progress_bar=False, progress_bar_text=None
+    ):
         """
         Walk through the itemsets (nodes) in the trie and visit them with the given visitor_function, using depth first.
 
@@ -127,26 +130,40 @@ class ItemsetsTrie:
         By setting only_with_consequents to True, only nodes containing consequents in the itemset are
         visited.
         """
-        node = self.root_node
-        while True:
-            if only_with_consequents and node.parent_node == self.root_node and not node.is_consequent:
-                return
-            next_action = "next_node"
-            if node != self.root_node:
-                next_action = visitor_function(node)
-            if next_action == "stop":
-                return
-            if node.first_child is not None and next_action != "skip_children":
-                # walk down
-                node = node.first_child
-            else:
-                # walk up ...
-                while not node.next_sibling:
-                    if node == self.root_node:
-                        return
-                    node = node.parent_node
-                # ... and right (node is not root node)
-                node = node.next_sibling
+        progress_bar = tqdm(total=self.number_nodes - 1) if show_progress_bar else None
+        if progress_bar:
+            progress_bar.set_description(progress_bar_text)
+        try:
+            node = self.root_node
+            while True:
+                if only_with_consequents and node.parent_node == self.root_node and not node.is_consequent:
+                    if progress_bar:
+                        progress_bar.update(progress_bar.total - progress_bar.n)
+                    return
+                next_action = "next_node"
+                if node != self.root_node:
+                    next_action = visitor_function(node)
+                    progress_bar.update(1)
+                if next_action == "stop":
+                    if progress_bar:
+                        progress_bar.update(progress_bar.total - progress_bar.n)
+                    return
+                if node.first_child is not None and next_action != "skip_children":
+                    # walk down
+                    node = node.first_child
+                else:
+                    # walk up ...
+                    while not node.next_sibling:
+                        if node == self.root_node:
+                            if progress_bar:
+                                progress_bar.update(progress_bar.total - progress_bar.n)
+                            return
+                        node = node.parent_node
+                    # ... and right (node is not root node)
+                    node = node.next_sibling
+        finally:
+            if progress_bar:
+                progress_bar.close()
 
     def walk_through_all_consequent_nodes_depth_first(self):
         """Yield all consequent nodes, using depth-first search."""

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import itertools
 import random
 import string
@@ -539,7 +538,8 @@ class Database:
 
     def copy(self):
         """Return a copy of the database."""
-        return copy.deepcopy(self)
+        # note: not using copy.deepcopy() here because it does not copy deep sometimes...
+        return Database.load_from_bytes(self.as_bytes())
 
     @staticmethod
     def merge_databases(database1: Database, database2: Database, *further_databases) -> Database:

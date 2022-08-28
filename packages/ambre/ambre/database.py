@@ -238,62 +238,6 @@ class Database:
         with open(filepath, "rb") as source_file:
             return Database.load_from_bytes(source_file.read())
 
-    # def derive_frequent_itemsets_columns_dict(
-    #     self,
-    #     filter_to_consequent_itemsets_only=False,
-    #     min_itemset_length=0,
-    #     max_itemset_length=None,
-    #     min_occurrences=0,
-    #     max_occurrences=None,
-    #     min_support=0,
-    #     max_support=1,
-    #     omit_column_names_in_output=False,
-    #     show_progress_bar=False,
-    # ):
-    #     """Derive the frequent itemsets from the internally assembled trie and return them in a dict object."""
-    #     # walk down the tree (depth-first) and collect the result
-    #     result = {"itemset": [], "occurrences": [], "support": [], "itemset_length": []}
-    #     root_node = self.itemsets_trie.root_node
-    #     consequent_root_nodes = self.itemsets_trie.get_consequent_root_nodes()
-    #     iterations = len(consequent_root_nodes) if filter_to_consequent_itemsets_only else len(root_node.children)
-    #     progress_bar = tqdm(total=iterations) if show_progress_bar else None
-    #     stack = deque([root_node])
-    #     is_root_node = True
-    #     while len(stack) > 0:
-    #         current_node = stack.pop()
-    #         if not is_root_node:
-    #             itemset_length = current_node.itemset_length
-    #             occurrences = current_node.occurrences
-    #             support = current_node.support
-    #             if (
-    #                 itemset_length >= min_itemset_length
-    #                 and ((max_itemset_length is None) or (itemset_length <= max_itemset_length))
-    #                 and ((max_occurrences is None) or (occurrences <= max_occurrences))
-    #                 and (occurrences >= min_occurrences)
-    #                 and (min_support <= support <= max_support)
-    #             ):
-    #                 itemset = current_node.itemset_items_uncompressed_sorted
-    #                 if not self.settings.omit_column_names and omit_column_names_in_output:
-    #                     itemset = self.prepostprocessor.remove_column_names_from_uncompressed_itemset(itemset)
-    #                 result["itemset"].append(itemset)
-    #                 result["occurrences"].append(current_node.occurrences)
-    #                 result["support"].append(current_node.support)
-    #                 result["itemset_length"].append(current_node.itemset_length)
-    #             if progress_bar and current_node.parent_node == root_node:
-    #                 progress_bar.update(1)
-    #         next_children = (
-    #             current_node.children.values()
-    #             if not (is_root_node and filter_to_consequent_itemsets_only)
-    #             else consequent_root_nodes
-    #         )
-    #         for child in reversed(next_children):
-    #             stack.append(child)
-    #         is_root_node = False
-    #     if progress_bar:
-    #         progress_bar.close()
-    #     # return result
-    #     return result
-
     def derive_frequent_itemsets_columns_dict(
         self,
         filter_to_consequent_itemsets_only=False,

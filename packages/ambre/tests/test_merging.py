@@ -41,6 +41,7 @@ Total number of transactions: 7
 Total number of nodes (incl. root node): 11
 """.strip()
     )
+
     assert merged_database.itemsets_trie.print(to_string=True) == expected_itemsets_trie_string
 
 

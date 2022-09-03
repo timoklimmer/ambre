@@ -118,7 +118,7 @@ class ItemsetsTrie:
         self, visitor_function, only_with_consequents=False, show_progress_bar=False, progress_bar_text=None
     ):
         """
-        Walk through the itemsets (nodes) in the trie and visit them with the given visitor_function, using depth first.
+        Walk through all itemsets (nodes) and visit them with the given visitor_function, using depth first.
 
         Visitor functions can control the walk by returning one of the following results:
             - "skip_children" skips the node's children and proceeds with the next node on the right
@@ -134,58 +134,114 @@ class ItemsetsTrie:
         if progress_bar:
             progress_bar.set_description(progress_bar_text)
         try:
-            node = self.root_node
+            next_node = self.root_node
             while True:
-                if only_with_consequents and node.parent_node == self.root_node and not node.is_consequent:
+                # stop if we have reached the nodes starting with antecedents and only_with_consequents is set
+                if only_with_consequents and next_node.parent_node == self.root_node and not next_node.is_consequent:
                     if progress_bar:
                         progress_bar.update(progress_bar.total - progress_bar.n)
                     return
+                # visit next node
                 next_action = "next_node"
-                if node != self.root_node:
-                    next_action = visitor_function(node)
+                if next_node != self.root_node:
+                    next_action = visitor_function(next_node)
                     if progress_bar:
                         progress_bar.update(1)
+                # stop on stop request
                 if next_action == "stop":
                     if progress_bar:
                         progress_bar.update(progress_bar.total - progress_bar.n)
                     return
-                if node.first_child is not None and next_action != "skip_children":
-                    # walk down
-                    node = node.first_child
+                # determine next node
+                if next_node.first_child is not None and next_action != "skip_children":
+                    # walk down if possible
+                    next_node = next_node.first_child
                 else:
-                    # walk up ...
-                    while not node.next_sibling:
-                        if node == self.root_node:
+                    # else walk up (until there is a parent that has a sibling)...
+                    while not next_node.next_sibling:
+                        if next_node == self.root_node:
                             if progress_bar:
                                 progress_bar.update(progress_bar.total - progress_bar.n)
                             return
-                        node = node.parent_node
-                    # ... and right (node is not root node)
-                    node = node.next_sibling
+                        next_node = next_node.parent_node
+                    # ...and right
+                    next_node = next_node.next_sibling
         finally:
             if progress_bar:
                 progress_bar.close()
 
-    def walk_through_all_consequent_nodes_depth_first(self):
-        """Yield all consequent nodes, using depth-first search."""
-        result = []
-        stack = deque([self.root_node])
-        is_root_node = True
-        while len(stack) > 0:
-            current_node = stack.pop()
-            if not is_root_node:
-                if current_node.is_consequent:
-                    result.append(current_node)
-                    next_children = [
-                        child_node for child_node in current_node.children.values() if child_node.is_consequent
-                    ]
+    def visit_itemset_nodes_breadth_first(
+        self, visitor_function, only_with_consequents=False, show_progress_bar=False, progress_bar_text=None
+    ):
+        """
+        Walk through all itemsets (nodes) and visit them with the given visitor_function, using breadth first.
+
+        Visitor functions can control the walk by returning one of the following results:
+            - "stop" stops the entire walk
+            - "next_node" or any other value continues with the next node.
+
+        Note: "skip_children" is NOT supported.
+
+        For convenience, the root node is not visited.
+
+        By setting only_with_consequents to True, only nodes containing consequents in the itemset are
+        visited.
+        """
+        progress_bar = tqdm(total=self.number_nodes - 1) if show_progress_bar else None
+        if progress_bar:
+            progress_bar.set_description(progress_bar_text)
+        try:
+            root_node_first_child = self.root_node.first_child
+            if root_node_first_child:
+                next_node = root_node_first_child
+                first_node_on_next_level = next_node.first_child
+                while True:
+                    # visit next node
+                    next_action = "next_node"
+                    if next_node != self.root_node:
+                        next_action = visitor_function(next_node)
+                        if progress_bar:
+                            progress_bar.update(1)
+                    # stop on stop request
+                    if next_action == "stop":
+                        if progress_bar:
+                            progress_bar.update(progress_bar.total - progress_bar.n)
+                        return
+                    # walk right
+                    next_node = next_node.next_node_on_same_level
+                    if only_with_consequents and next_node and not next_node.has_consequents:
+                        next_node = None
+                    if next_node is not None:
+                        first_node_on_next_level = first_node_on_next_level or next_node.first_child
+                    else:
+                        # if not possible: walk down
+                        next_node = first_node_on_next_level
+                        if first_node_on_next_level:
+                            first_node_on_next_level = first_node_on_next_level.first_child
+                        # or stop if there is no node to walk down
+                        if not next_node:
+                            if progress_bar:
+                                progress_bar.update(progress_bar.total - progress_bar.n)
+                            return
             else:
-                next_children = [
-                    child_node for child_node in current_node.children.values() if child_node.is_consequent
-                ]
-            for child in reversed(next_children):
-                stack.append(child)
-            is_root_node = False
+                if progress_bar:
+                    progress_bar.update(progress_bar.total - progress_bar.n)
+                    return
+        finally:
+            if progress_bar:
+                progress_bar.close()
+
+    def get_all_consequent_nodes_depth_first(self):
+        """Return all consequent nodes, using depth-first search."""
+        result = []
+
+        def _collect_result(node):
+            if node.is_consequent:
+                result.append(node)
+            else:
+                return "skip_children"
+
+        self.visit_itemset_nodes_depth_first(_collect_result, only_with_consequents=True)
         return result
 
     def get_consequent_root_nodes(self):
@@ -297,13 +353,29 @@ class ItemsetNode(dataobject):
         """Return the node's next sibling."""
         if self.parent_node is None:
             return None
-        siblings_iterator = iter(self.parent_node.children)
+        sibling_iterator = iter(self.parent_node.children)
         try:
-            while next(siblings_iterator) != self.compressed_item:
+            while next(sibling_iterator) != self.compressed_item:
                 pass
-            return self.parent_node.children[next(siblings_iterator)]
+            return self.parent_node.children[next(sibling_iterator)]
         except StopIteration:
             return None
+
+    @property
+    def next_node_on_same_level(self):
+        """Return the node's next node on the same level."""
+        next_sibling = self.next_sibling
+        if next_sibling:
+            return next_sibling
+        if self.parent_node:
+            next_right_parent = self.parent_node
+            while (next_right_parent := next_right_parent.next_sibling) is not None:
+                if next_right_parent is None:
+                    return None
+                next_parent_first_child = next_right_parent.first_child
+                if next_parent_first_child:
+                    return next_parent_first_child
+        return None
 
     @property
     def itemset_nodes_sorted(self):
@@ -332,6 +404,29 @@ class ItemsetNode(dataobject):
             result += 1
             iterated_node = iterated_node.parent_node
         return result
+
+    @property
+    def antecedents_length(self):
+        """Return the length of the itemset's antecedents."""
+        result = 0
+        iterated_node = self
+        while iterated_node is not None:
+            if not iterated_node.is_consequent:
+                result += 1
+            else:
+                return result
+            iterated_node = iterated_node.parent_node
+        return result
+
+    @property
+    def has_consequents(self):
+        """Check if the itemset contains consequents."""
+        iterated_node = self
+        while iterated_node is not None:
+            if iterated_node.is_consequent:
+                return True
+            iterated_node = iterated_node.parent_node
+        return False
 
     @property
     def consequents_compressed(self):

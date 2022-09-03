@@ -467,7 +467,7 @@ class Database:
 
         # add the non-antecedent consequences to the result if desired (also considering several config settings)
         if non_antecedents_rules:
-            for consequent_node in self.itemsets_trie.walk_through_all_consequent_nodes_depth_first():
+            for consequent_node in self.itemsets_trie.get_all_consequent_nodes_depth_first():
                 confidence = consequent_node.confidence
                 lift = consequent_node.lift
                 occurrences = consequent_node.occurrences

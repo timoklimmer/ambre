@@ -68,7 +68,11 @@ class Database:
     def insert_from_pandas_dataframe_rows(self, pandas_df, input_columns=None, show_progress=True):
         """Interpret each row in the given pandas dataframe as transaction and insert those."""
         columns = input_columns if input_columns else pandas_df.columns
-        transaction_iterator = tqdm(pandas_df[columns].iterrows()) if show_progress else pandas_df[columns].iterrows()
+        transaction_iterator = (
+            tqdm(pandas_df[columns].iterrows(), total=pandas_df.shape[0])
+            if show_progress
+            else pandas_df[columns].iterrows()
+        )
         if self.settings.omit_column_names:
             for _, row in transaction_iterator:
                 self.insert_transaction(frozenset(f"{value}" for value in row.values))
@@ -81,7 +85,7 @@ class Database:
 
     def insert_transactions(self, transactions, show_progress=True):
         """Insert the given transactions, optionally sampling to enable larger datasets."""
-        transaction_iterator = tqdm(transactions) if show_progress else transactions
+        transaction_iterator = tqdm(transactions, total=len(transactions)) if show_progress else transactions
         for transaction in transaction_iterator:
             self.insert_transaction(transaction)
 

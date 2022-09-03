@@ -173,63 +173,64 @@ class ItemsetsTrie:
     def visit_itemset_nodes_breadth_first(
         self, visitor_function, only_with_consequents=False, show_progress_bar=False, progress_bar_text=None
     ):
-        """
-        Walk through all itemsets (nodes) and visit them with the given visitor_function, using breadth first.
+        raise NotImplementedError()
+        # """
+        # Walk through all itemsets (nodes) and visit them with the given visitor_function, using breadth first.
 
-        Visitor functions can control the walk by returning one of the following results:
-            - "stop" stops the entire walk
-            - "next_node" or any other value continues with the next node.
+        # Visitor functions can control the walk by returning one of the following results:
+        #     - "stop" stops the entire walk
+        #     - "next_node" or any other value continues with the next node.
 
-        Note: "skip_children" is NOT supported.
+        # Note: "skip_children" is NOT supported.
 
-        For convenience, the root node is not visited.
+        # For convenience, the root node is not visited.
 
-        By setting only_with_consequents to True, only nodes containing consequents in the itemset are
-        visited.
-        """
-        progress_bar = tqdm(total=self.number_nodes - 1) if show_progress_bar else None
-        if progress_bar:
-            progress_bar.set_description(progress_bar_text)
-        try:
-            root_node_first_child = self.root_node.first_child
-            if root_node_first_child:
-                next_node = root_node_first_child
-                first_node_on_next_level = next_node.first_child
-                while True:
-                    # visit next node
-                    next_action = "next_node"
-                    if next_node != self.root_node:
-                        next_action = visitor_function(next_node)
-                        if progress_bar:
-                            progress_bar.update(1)
-                    # stop on stop request
-                    if next_action == "stop":
-                        if progress_bar:
-                            progress_bar.update(progress_bar.total - progress_bar.n)
-                        return
-                    # walk right
-                    next_node = next_node.next_node_on_same_level
-                    if only_with_consequents and next_node and not next_node.has_consequents:
-                        next_node = None
-                    if next_node is not None:
-                        first_node_on_next_level = first_node_on_next_level or next_node.first_child
-                    else:
-                        # if not possible: walk down
-                        next_node = first_node_on_next_level
-                        if first_node_on_next_level:
-                            first_node_on_next_level = first_node_on_next_level.first_child
-                        # or stop if there is no node to walk down
-                        if not next_node:
-                            if progress_bar:
-                                progress_bar.update(progress_bar.total - progress_bar.n)
-                            return
-            else:
-                if progress_bar:
-                    progress_bar.update(progress_bar.total - progress_bar.n)
-                    return
-        finally:
-            if progress_bar:
-                progress_bar.close()
+        # By setting only_with_consequents to True, only nodes containing consequents in the itemset are
+        # visited.
+        # """
+        # progress_bar = tqdm(total=self.number_nodes - 1) if show_progress_bar else None
+        # if progress_bar:
+        #     progress_bar.set_description(progress_bar_text)
+        # try:
+        #     root_node_first_child = self.root_node.first_child
+        #     if root_node_first_child:
+        #         next_node = root_node_first_child
+        #         first_node_on_next_level = next_node.first_child
+        #         while True:
+        #             # visit next node
+        #             next_action = "next_node"
+        #             if next_node != self.root_node:
+        #                 next_action = visitor_function(next_node)
+        #                 if progress_bar:
+        #                     progress_bar.update(1)
+        #             # stop on stop request
+        #             if next_action == "stop":
+        #                 if progress_bar:
+        #                     progress_bar.update(progress_bar.total - progress_bar.n)
+        #                 return
+        #             # walk right
+        #             next_node = next_node.next_node_on_same_level
+        #             if only_with_consequents and next_node and not next_node.has_consequents:
+        #                 next_node = None
+        #             if next_node is not None:
+        #                 first_node_on_next_level = first_node_on_next_level or next_node.first_child
+        #             # if not possible: walk down
+        #             else:
+        #                 next_node = first_node_on_next_level
+        #                 if first_node_on_next_level:
+        #                     first_node_on_next_level = first_node_on_next_level.first_child
+        #                 # or stop if there is no node to walk down
+        #                 if not next_node:
+        #                     if progress_bar:
+        #                         progress_bar.update(progress_bar.total - progress_bar.n)
+        #                     return
+        #     else:
+        #         if progress_bar:
+        #             progress_bar.update(progress_bar.total - progress_bar.n)
+        #             return
+        # finally:
+        #     if progress_bar:
+        #         progress_bar.close()
 
     def get_all_consequent_nodes_depth_first(self):
         """Return all consequent nodes, using depth-first search."""
@@ -427,6 +428,11 @@ class ItemsetNode(dataobject):
                 return True
             iterated_node = iterated_node.parent_node
         return False
+
+    @property
+    def has_antecedents(self):
+        """Check if the itemset contains antecedents."""
+        return not self.is_consequent
 
     @property
     def consequents_compressed(self):

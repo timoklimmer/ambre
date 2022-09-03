@@ -1,4 +1,4 @@
-<p>
+<p align="center">
     <img src="logo/logo_small.png"/>
 </p>
 
@@ -125,6 +125,7 @@ from ambre import Database
 #          transaction sizes such as insert_transactions().
 #        - we are using "Survived=1" here because we want to know under which conditions people survived best, ie.
 #          when column "Survived" has value 1.
+print("Loading data...")
 database = Database(["Survived=1"], max_antecedents_length=3)
 database.insert_from_pandas_dataframe_rows(
     pd.read_csv("packages/ambre/tests/datasets/titanic.csv"),
@@ -133,15 +134,19 @@ database.insert_from_pandas_dataframe_rows(
 
 # derive frequent itemsets
 print("Deriving frequent itemsets...")
-derived_itemsets = database.derive_frequent_itemsets_pandas().sort_values(
-    by=["occurrences", "itemset_length"], ascending=[False, True]
+derived_itemsets = (
+    database.derive_frequent_itemsets_pandas()
+    .sort_values(by=["occurrences", "itemset_length"], ascending=[False, True])
+    .reset_index(drop=True)
 )
 display(derived_itemsets)
 
 # derive rules
 print("Deriving rules...")
 derived_rules = database.derive_rules_pandas(min_occurrences=30, min_confidence=0.7)
-derived_rules = derived_rules.sort_values(by=["confidence", "occurrences"], ascending=[False, False])
+derived_rules = derived_rules.sort_values(by=["confidence", "occurrences"], ascending=[False, False]).reset_index(
+    drop=True
+)
 display(derived_rules)
 
 # common sense rules

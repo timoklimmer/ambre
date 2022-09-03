@@ -21,4 +21,4 @@ class CodeTimer:
         """Exit timing when context is exited."""
         ms_taken = (timeit.default_timer() - self.start) * 1000.0
         pd_time_delta = pd.to_timedelta(ms_taken, unit="ms")
-        print(f"Time taken: {pd_time_delta}.")
+        print(f"Time taken: {pd_time_delta}.\n")

@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import itertools
-import random
-import string
 import sys
 import warnings
-from collections import deque
 from io import BytesIO
 
 import joblib
@@ -37,7 +34,7 @@ class Database:
         column_value_separator="=",
         omit_column_names=False,
         disable_string_consequent_warning=False,
-        item_alphabet=string.printable,
+        item_alphabet=None,
     ):
         """Init."""
         if not disable_string_consequent_warning and isinstance(consequents, str):
@@ -68,43 +65,25 @@ class Database:
         )
         self.common_sense_rules = []
 
-    def insert_from_pandas_dataframe_rows(self, pandas_df, sampling_ratio=1, input_columns=None, show_progress=True):
+    def insert_from_pandas_dataframe_rows(self, pandas_df, input_columns=None, show_progress=True):
         """Interpret each row in the given pandas dataframe as transaction and insert those."""
         columns = input_columns if input_columns else pandas_df.columns
-        self.insert_transactions(
-            (
-                [
-                    (
-                        f"{row[column]}"
-                        if self.settings.omit_column_names
-                        else f"{column}{self.settings.column_value_separator}{row[column]}"
-                    )
-                    for column in columns
-                ]
-                for _, row in pandas_df.iterrows()
-            ),
-            sampling_ratio,
-            show_progress,
-        )
-
-    def insert_transactions(self, transactions, sampling_ratio=1, show_progress=True):
-        """Insert the given transactions, optionally sampling to enable larger datasets."""
-        if not 0 <= sampling_ratio <= 1:
-            raise ValueError(
-                f"Parameter 'sampling_ratio' must be between 0 and 1. Specified value is: {sampling_ratio}."
-            )
-        transaction_iterator = tqdm(transactions) if show_progress else transactions
-        if sampling_ratio == 1:
-            deque([self.insert_transaction(transaction) for transaction in transaction_iterator], maxlen=0)
+        transaction_iterator = tqdm(pandas_df[columns].iterrows()) if show_progress else pandas_df[columns].iterrows()
+        if self.settings.omit_column_names:
+            for _, row in transaction_iterator:
+                self.insert_transaction(frozenset(f"{value}" for value in row.values))
         else:
-            deque(
-                [
-                    self.insert_transaction(transaction)
-                    for transaction in transaction_iterator
-                    if (random.random() < sampling_ratio)
-                ],
-                maxlen=0,
-            )
+            column_value_separator = self.settings.column_value_separator
+            for _, row in transaction_iterator:
+                self.insert_transaction(
+                    frozenset(f"{column}{column_value_separator}{row[column]}" for column in columns)
+                )
+
+    def insert_transactions(self, transactions, show_progress=True):
+        """Insert the given transactions, optionally sampling to enable larger datasets."""
+        transaction_iterator = tqdm(transactions) if show_progress else transactions
+        for transaction in transaction_iterator:
+            self.insert_transaction(transaction)
 
     def insert_transaction(self, transaction):
         """Insert the given transaction."""

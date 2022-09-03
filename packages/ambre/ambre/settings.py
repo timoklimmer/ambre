@@ -25,7 +25,7 @@ class Settings:
         self.column_value_separator = column_value_separator
         self.omit_column_names = omit_column_names
         self.item_alphabet = item_alphabet
-        if self.case_insensitive:
+        if self.case_insensitive and self.item_alphabet is not None:
             self.item_alphabet = "".join(sorted(set((char.casefold() for char in self.item_alphabet))))
 
     def __eq__(self, other):

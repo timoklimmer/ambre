@@ -1,10 +1,11 @@
 """Install script for the ambre package."""
 
 from setuptools import setup, find_packages
+from ambre.versions import AMBRE_PACKAGE_VERSION
 
 setup(
     name="ambre",
-    version="0.1",
+    version=AMBRE_PACKAGE_VERSION,
     description="An Association Mining-Based Rules Extraction engine. Find out why things are how they are.",
     url="https://github.com/timoklimmer/ambre",
     author="Timo Klimmer",

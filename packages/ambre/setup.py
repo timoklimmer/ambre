@@ -6,7 +6,7 @@ from ambre.versions import AMBRE_PACKAGE_VERSION
 setup(
     name="ambre",
     version=AMBRE_PACKAGE_VERSION,
-    description="An Association Mining-Based Rules Extraction engine. Find out why things are how they are.",
+    description="An Association Mining-Based Rules Extraction engine. Find the needle in the haystack.",
     url="https://github.com/timoklimmer/ambre",
     author="Timo Klimmer",
     author_email="",

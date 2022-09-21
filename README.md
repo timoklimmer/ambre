@@ -4,8 +4,6 @@
 
 # ambre
 
-> TLDR: **Give it your data, and it tells you under which circumstances the outcomes you are interested in occur.**
-
 ambre is a package for association mining-based rules extraction. It processes your data and extracts rules of interest
 for you, in the form of:
 
@@ -16,6 +14,8 @@ you)
 at confidence = x%, with support = n cases
 </i>
 </p>
+
+**To put in a nutshell: Give it your data, and it tells you under which circumstances your outcomes of interest occur.**
 
 In contrast to other approaches like deriving feature importances, it tells you more than just columns and their
 influence on outcomes. Instead, it tells you exactly which *combinations* of *concrete* values lead to your outcomes,

@@ -8,14 +8,11 @@ import pytest
 from ambre import Database
 
 from .testing_helpers import (
-    get_titanic_survived_1_database,
-    get_wikipedia_database_consequent_bread,
+    get_titanic_survived_1_database, get_wikipedia_database_consequent_bread,
     get_wikipedia_database_consequent_bread_and_milk,
     get_wikipedia_database_consequent_bread_custom_input_alphabet,
-    get_wikipedia_database_no_consequents,
-    load_pandas_dataframe_from_csv,
-    save_and_ensure_actual_result_vs_expected,
-)
+    get_wikipedia_database_no_consequents, load_pandas_dataframe_from_csv,
+    save_and_ensure_actual_result_vs_expected)
 
 
 def test_rule_extraction_wikipedia_consequent_bread(request):
@@ -46,9 +43,7 @@ def test_rule_extraction_wikipedia_consequent_bread_non_antecedents_rules(reques
     Condition: Bread and milk are the consequents we are interested in, and we also want to extract the non-antecedents
                rules.
     """
-    actual_result = get_wikipedia_database_consequent_bread_and_milk().derive_rules_pandas(
-        non_antecedents_rules=True
-    )
+    actual_result = get_wikipedia_database_consequent_bread_and_milk().derive_rules_pandas(non_antecedents_rules=True)
     save_and_ensure_actual_result_vs_expected(actual_result, request)
 
 

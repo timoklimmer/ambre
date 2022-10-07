@@ -2,7 +2,7 @@
 
 import re
 from ambre.settings import Settings
-from ambre.helpers.strings import compress_string, decompress_string
+from .helpers.strings import compress_string, decompress_string
 
 
 class PrePostProcessor:

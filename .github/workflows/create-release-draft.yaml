@@ -1,0 +1,54 @@
+name: Create Release Draft
+run-name: Create release draft for ${{ github.event.inputs.version }}
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version. Use format "v1.0.0", "v1.0.0b1" or "v1.0.0rc1".
+        required: true
+      database-schema-version-checked:
+        description: Database schema version up-to-date?
+        type: boolean
+        required: true
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VERSIONS_FILE_PATH: packages/ambre/ambre/versions.py
+jobs:
+ Create-Release-Draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print settings
+        run: |
+          echo "Creating draft release..." && \
+          echo "Repository : ${{ github.repository }}" && \
+          echo "Branch     : ${{ github.ref }}" && \
+          echo "Version    : ${{ github.event.inputs.version }}"
+      - name: Validate version format
+        run: |
+          [[ "${{ github.event.inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+((a|b|rc)[0-9]+)?$ ]] || (echo "Version format is invalid." && exit 1)
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
+      - name: Git config
+        run: |
+          git config --local user.name github-actions
+          git config --local user.email github-actions@github.com
+      - name: Update version in version script
+        run: |
+          sed -i 's/PACKAGE_VERSION = \".\+\"/PACKAGE_VERSION = \"${{ github.event.inputs.version }}\"/g' $VERSIONS_FILE_PATH && \
+          sed -i 's/= "v/= "/g' $VERSIONS_FILE_PATH
+          git commit $VERSIONS_FILE_PATH -m "New version ${{ github.event.inputs.version }}"
+          git push
+      - name: Create tag
+        run: |
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}
+      - name: Create release draft
+        run: |
+          gh release create ${{ github.event.inputs.version }} --target ${{ github.ref }} --draft --title "${{ github.event.inputs.version }}" --generate-notes --prerelease
+      - name: Reset version to generic dev version
+        run: |
+          sed -i 's/PACKAGE_VERSION = \".\+\"/PACKAGE_VERSION = \"0.0.0\"/g' $VERSIONS_FILE_PATH
+          git commit $VERSIONS_FILE_PATH -m "Dev version reset"
+          git push --force

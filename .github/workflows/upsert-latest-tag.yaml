@@ -1,0 +1,32 @@
+name: Upsert Latest Tag
+run-name: Upsert latest tag to ${{ github.event.release.tag_name }}
+on:
+  release:
+    types: [released]
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+jobs:
+ Upsert-Latest-Tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print settings
+        run: |
+          echo "Publishing new release..." && \
+          echo "Repository : ${{ github.repository }}" && \
+          echo "Branch     : ${{ github.ref }}" && \
+          echo "Version    : ${{ github.event.inputs.version }}"
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
+      - name: Git config
+        run: |
+          git config --local user.name github-actions
+          git config --local user.email github-actions@github.com
+      - name: Delete/recreate latest tag
+        run: |
+          git fetch --tags
+          git tag -l | grep latest | xargs --no-run-if-empty git push --force --delete origin
+          git tag -l | grep latest | xargs --no-run-if-empty git tag -d
+          git tag latest
+          git push --force origin latest

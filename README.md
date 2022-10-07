@@ -71,20 +71,29 @@ it.
 
 ## Installation
 
-### pip
+### pip / GitHub
 
-The package is not available on PyPI yet but can be installed from GitHub via *pip*.
+The package is not available on PyPI yet but can be installed from GitHub via *pip* directly.
 
-To install, either run
+To install the latest stable release, run
+
+`pip install --upgrade git+https://github.com/timoklimmer/ambre.git@latest#subdirectory=packages/ambre`
+
+Alternatively, if you want to install a specific version, simply specify that specific version instead of "latest".
+
+`pip install --upgrade git+https://github.com/timoklimmer/ambre.git@v1.0.0#subdirectory=packages/ambre`
+
+If you like living on the edge, you can also install the very newest code by running
 
 `pip install --upgrade git+https://github.com/timoklimmer/ambre.git#subdirectory=packages/ambre`
 
-OR
+In case you want to install via a `requirements.txt` file, add the respective `git+https://github.com/...` part in
+a new line of that file.
 
-clone the repo and install the package by running `pip install -e .` in folder `packages/ambre`.
+### Source Code
 
-You can also add the package to your `requirements.txt` file by adding a
-`git+https://github.com/timoklimmer/ambre.git#subdirectory=packages/ambre` line.
+To install from source code, clone the repository or download the code and run `pip install -e .` in folder
+`packages/ambre`.
 
 
 ## Usage Example

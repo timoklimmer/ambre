@@ -1,7 +1,7 @@
 """Test the helper functions provided by the strings helper module."""
 
 import pytest
-from ambre.helpers.strings import compress_string, decompress_string
+from ambre.strings import compress_string, decompress_string
 
 
 def test_roundtrip_no_custom_alphabet():

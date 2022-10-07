@@ -5,7 +5,7 @@ from collections import deque
 from recordclass import dataobject
 from tqdm import tqdm
 
-from .helpers.strings import compress_string, decompress_string
+from ambre.strings import compress_string, decompress_string
 
 
 class ItemsetsTrie:

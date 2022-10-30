@@ -68,6 +68,11 @@ ambre's main purpose is to extract rules. The required data structure underneath
 itemset mining, too. In case you are looking for a frequent itemset mining solution "only", you can also use ambre for
 it.
 
+### Predictions
+Once ambre has been given some data, it can also be used for predictions. One of the big advantages thereby is that it
+can predict even if you don't have all necessary data to fill a table row of a fixed schema. By ambre, you can just give it your factors ("antecedents"), and it will tell you - based on the data collected - at which probabilities the
+outcomes ("consequents") will occur.
+
 
 ## Installation
 
@@ -211,6 +216,32 @@ rules = merged_database.derive_rules_pandas(non_antecedents_rules=True)
 display(rules)
 ```
 
+### Predictions
+```python
+from IPython.display import display
+
+from ambre import Database
+
+# as always, we need a database first
+database = Database(["bread", "pasta"])
+database.insert_transaction(["milk", "bread"])
+database.insert_transaction(["butter"])
+database.insert_transaction(["pasta", "milk", "butter"])
+database.insert_transaction(["beer", "diapers"])
+database.insert_transaction(["milk", "bread", "butter"])
+database.insert_transaction(["pasta", "bread"])
+database.insert_transaction(["bread"])
+
+# how likely is it that bread or pasta are also bought when someone buys milk?
+display(database.predict_consequents_pandas(["milk"]))
+
+# -> When milk is bought, the probability that bread is also bought, is at 2/3,
+#    and the probability that pasta is also bought is at 1/3.
+
+# to skip unknown antecedents, use the skip_unknown_antecedents flag
+display(database.predict_consequents_pandas(["milk", "potatoes"], skip_unknown_antecedents=True))
+```
+
 
 ## Glossary
 |Term|Meaning|
@@ -219,8 +250,8 @@ display(rules)
 |Transaction|A set of items that occur together, eg. a basket at a supermarket or all infos around a specific defect instance.|
 |Database|Set of all transactions.|
 |Frequent Itemset|A set of items that occurs frequently across all transactions.|
-|Antecedent|Antecedents are items that lead to/are correlated with one or more consequents.|
-|Consequent|An item which occurs because of/together with one or more antecedents.|
+|Antecedent|Antecedents are items that lead to/are correlated with one or more consequents ("factors").|
+|Consequent|An item which occurs because of/together with one or more antecedents ("outcomes").|
 |Rule|Describes how well a certain set of antecedents leads to certain consequents.|
 |Support|The proportion of transactions in the dataset which contain the respective itemset.|
 |Confidence|Estimates the probability of finding a certain consequence under the condition that certain antecedents have been observed.|

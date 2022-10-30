@@ -86,32 +86,41 @@ class ItemsetsTrie:
             return "\n".join(result_lines)
         return None
 
-    def get_node_from_compressed(self, compressed_itemset):
+    def get_node_from_compressed(self, compressed_itemset, skip_unknown_items=False):
         """Get the itemset node from the trie representing the specified itemset (assuming compressed items)."""
         if not compressed_itemset:
             raise ValueError("Parameter 'compressed_itemset' is None or empty.")
         node = self.root_node
         for compressed_item in compressed_itemset:
+            # item is known
             if compressed_item in node.children:
                 node = node.children[compressed_item]
             else:
-                uncompressed_itemset = [
-                    decompress_string(item, original_input_alphabet=self.item_alphabet) for item in compressed_itemset
-                ]
-                raise ValueError(
-                    (
-                        f"Cannot find node for the given itemset (uncompressed: {uncompressed_itemset}). Ensure that "
-                        f"the specified node is contained in the trie."
+                # item is unknown
+                if not skip_unknown_items:
+                    # skip_unknown_items is false -> raise exception
+                    uncompressed_itemset = [
+                        decompress_string(item, original_input_alphabet=self.item_alphabet)
+                        for item in compressed_itemset
+                    ]
+                    raise ValueError(
+                        (
+                            f"Cannot find node for the given itemset (uncompressed: {uncompressed_itemset}). Ensure that "
+                            f"the specified node is contained in the trie."
+                        )
                     )
-                )
+                else:
+                    # skip_unknown_items is true -> skip item and continue
+                    pass
         return node
 
-    def get_node_from_uncompressed(self, uncompressed_itemset):
+    def get_node_from_uncompressed(self, uncompressed_itemset, skip_unknown_items=False):
         """Get the itemset node from the trie representing the specified itemset (assuming uncompressed items)."""
         if not uncompressed_itemset:
             raise ValueError("Parameter 'uncompressed_itemset' is None or empty.")
         return self.get_node_from_compressed(
-            list(compress_string(item, input_alphabet=self.item_alphabet) for item in uncompressed_itemset)
+            list(compress_string(item, input_alphabet=self.item_alphabet) for item in uncompressed_itemset),
+            skip_unknown_items=skip_unknown_items,
         )
 
     def visit_itemset_nodes_depth_first(

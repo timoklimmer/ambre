@@ -19,6 +19,7 @@ def test_roundtrip_custom_input_alphabet():
     assert decompressed_string == string_to_compress
     assert len(compressed_string) <= len(string_to_compress)
 
+
 def test_roundtrip_begins_with_first_char_in_alphabet():
     """Test if the roundtrip works when the first char is the first char from the alphabet."""
     string_to_compress = "0A"
@@ -26,6 +27,7 @@ def test_roundtrip_begins_with_first_char_in_alphabet():
     compressed_string = compress_string(string_to_compress, input_alphabet=custom_input_alphabet)
     decompressed_string = decompress_string(compressed_string, original_input_alphabet=custom_input_alphabet)
     assert decompressed_string == string_to_compress
+
 
 def test_if_throws_when_input_char_out_of_alphabet():
     """Test if a ValueError is thrown when a char shall be compressed that is not included in the input alphabet."""

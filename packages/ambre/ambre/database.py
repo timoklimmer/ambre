@@ -6,8 +6,10 @@ import itertools
 import sys
 import warnings
 from io import BytesIO
+from typing import Iterable, Union
 
 import joblib
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
@@ -463,7 +465,7 @@ class Database:
                     and ((max_occurrences is None) or (occurrences <= max_occurrences))
                     and (occurrences >= min_occurrences)
                 ):
-                    result["antecedents"].append("")
+                    result["antecedents"].append([""])
                     result["consequents"].append(consequent_node.itemset_items_uncompressed_sorted)
                     result["confidence"].append(consequent_node.confidence)
                     result["lift"].append(consequent_node.lift)
@@ -507,6 +509,82 @@ class Database:
         See derive_rules_columns_dict() for parameter descriptions.
         """
         self.derive_rules_pandas(*args, **kwargs).to_csv(filename, header=True, index=False)
+
+    def predict_consequents_records(
+        self,
+        antecedents: Union[Iterable[str], None] = None,
+        consequents: Union[Iterable[str], None] = None,
+        skip_unknown_antecedents=False,
+    ) -> dict:
+        """
+        Return the probabilities for all or only for the given consequents, assuming the given antecedents hold true.
+
+        Unknown antecedents can be skipped if skip_unknown_antecedents is set to True.
+        If no antecedents are given, prior probabilities are returned.
+        If no explicit consequents are specified, probabilities for all consequents are computed.
+        """
+        total_result = []
+        normalized_antecedents = (
+            self.prepostprocessor.normalize_uncompressed_itemset(antecedents) if antecedents else []
+        )
+        compressed_antecedents = self.prepostprocessor.compress_itemset(normalized_antecedents)
+        compressed_consequents_to_iterate = self.prepostprocessor.compressed_consequents
+        if consequents:
+            normalized_consequents = self.prepostprocessor.normalize_uncompressed_itemset(consequents)
+            for normalized_consequent in normalized_consequents:
+                if normalized_consequent not in self.prepostprocessor.normalized_consequents:
+                    raise ValueError(
+                        (
+                            f"The specified consequent '{normalized_consequent}' has not been specified as a consequent "
+                            f"for the database. Ensure you pass only valid consequents."
+                        )
+                    )
+            compressed_consequents_to_iterate = self.prepostprocessor.compress_itemset(normalized_consequents)
+
+        for compressed_consequent in compressed_consequents_to_iterate:
+            probability = None
+            try:
+                if len(compressed_antecedents) > 0:
+                    # posterior probability requested
+                    # Bayes' Theorem
+                    # P(consequent | antecedents) = P(consequent ∩ antecedents) / P(antecedents)
+                    p_consequent_intersect_antecedents = self.itemsets_trie.get_node_from_compressed(
+                        [compressed_consequent] + compressed_antecedents, skip_unknown_antecedents
+                    ).support
+                    p_antecedents = self.itemsets_trie.get_node_from_compressed(
+                        compressed_antecedents, skip_unknown_antecedents
+                    ).support
+                    probability = p_consequent_intersect_antecedents / p_antecedents if p_antecedents else None
+                else:
+                    # prior probability requested
+                    # P(consequent) is a simple lookup from the trie
+                    probability = self.itemsets_trie.get_node_from_compressed(
+                        [compressed_consequent], skip_unknown_antecedents
+                    ).support
+            except ValueError:
+                pass
+            total_result.append(
+                {
+                    "antecedents": normalized_antecedents,
+                    "consequent": self.prepostprocessor.decompress_item(compressed_consequent),
+                    "probability": probability,
+                }
+            )
+        total_result = sorted(
+            total_result, key=lambda item: item["probability"] if item["probability"] else 0, reverse=True
+        )
+        return total_result
+
+    def predict_consequents_pandas(self, *args, **kwargs):
+        """
+        Determine consequent probabilities given certain antecedents and return result as pandas dataframe.
+
+        See predict_consequents_records() for parameter descriptions.
+        """
+        result = pd.DataFrame(self.predict_consequents_records(*args, **kwargs)).replace([np.nan], [None])
+        for list_column in ["antecedents"]:
+            result[list_column] = result[list_column].map(self.settings.item_separator_for_string_outputs.join)
+        return result
 
     def copy(self):
         """Return a copy of the database."""

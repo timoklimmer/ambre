@@ -6,7 +6,7 @@
 ---
 
 ambre is a Python package for "association mining-based rules extraction". In a nutshell: **Give it your data, and it
-will teach you when certain events are most likely to occur.**
+will teach you when certain outcomes are most likely to occur.**
 
 <p align="center">
     <font size="4">
@@ -21,7 +21,7 @@ concrete value combinations, accompanied by tangible statistics. Because ambre a
 
 
 ## Example Use Cases
-### Reduce Defects in a Production Line
+### 1. Reduce Defects in a Production Line
 Imagine you had to manage a production line, and your production produces too many defects. Through traditional machine
 learning approaches, you may learn for example that your machine vendors as well as the used material are highly correlated with the number of defects encountered.
 
@@ -31,17 +31,17 @@ material "Nylon 23A-B" is used, having seen 1.234 cases of that in your data.
 Because ambre's output is more detailed, the information we get from it is more valuable than pure importances of
 factors.
 
-### Increase Customer Satisfaction of a Service Desk
+### 2. Increase Customer Satisfaction of a Service Desk
 Another example: imagine you were responsible for a service desk. Your CSAT score is terribly low, and you need more
 insight into where you can take targeted countermeasures. One option is to sift through numerous reports and try to find
 exactly that one bar chart which makes your life good again. The other option is to feed ambre with data about your
 tickets and related CSAT scores. Once fed, ambre can show you in a snap where the problematic patterns are.
 
-### Identify Promising Research Directions
+### 3. Identify Promising Research Directions
 Let's imagine you were a researcher, and your goal was to explain why people develop a certain disease. Assuming you did not have an idea of where to go deeper in your research, you could collect some data of what you think might be
 relevant.
 
-After being fed with your data, ambre can extract relevant connections, helping you to find the areas where you should focus on. Because ambre automatically eliminates redundant rules, and because you can tell ambre about the rules you already know, it will quickly point you to the connections that matter for your work. Of course, ambre also gives you all the numbers it uses, so you can write comprehensible and reproducable papers.
+After being fed with data, ambre can extract relevant connections, helping you to find the areas where you should focus on. Because ambre automatically eliminates redundant rules, and because you can tell ambre about the rules you already know, it will quickly point you to the connections that matter for your work. Of course, ambre also gives you all the numbers it uses, so you can write comprehensible and reproducable papers.
 
 
 ## Selected Highlights of ambre

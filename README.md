@@ -15,7 +15,7 @@ will teach you when certain events are most likely to occur.**
 </p>
 
 Unlike other approaches, ambre identifies more than just columns and their influence on outcomes. Instead, it finds
-concrete value combinations leading to certain outcomes, accompanied by tangible statistics. Because ambre analyzes on a very detailed level, while filtering out "the noise", it helps you to derive very precise and targeted business decisions and actions.
+concrete value combinations, accompanied by tangible statistics. Because ambre analyzes on a very detailed level, while filtering out "the noise", it helps you to derive very precise and targeted business decisions and actions.
 
 **ambre helps find the needle in the haystack -- fast and actionable.**
 

@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="images/logo_gh_readme_dark_mode.png">
-  <img alt="ambre" src="images/logo_gh_readme_light_mode.png" style="display: block; margin-left: auto; margin-right: auto; width: 50%" />
+  <img alt="ambre" src="images/logo_gh_readme_light_mode.png" style="display: block; margin-left: auto; margin-right: auto; width: 33%" />
 </picture>
 
 ambre is a Python package for "association mining-based rules extraction". In a nutshell: **Give it your data, and it

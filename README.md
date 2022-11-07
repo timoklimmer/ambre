@@ -1,25 +1,23 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/logo_gh_readme_dark_mode.png" width="33%">
-  <img alt="ambre" src="images/logo_gh_readme_light_mode.png" width="33%" />
+  <source media="(prefers-color-scheme: dark)" srcset="images/logo_gh_readme_dark_mode.png" width="40%">
+  <img alt="ambre" src="images/logo_gh_readme_light_mode.png" width="40%" />
 </picture>
 
 ---
 
 ambre is a Python package for "association mining-based rules extraction". In a nutshell: **Give it your data, and it
-will teach you in which situations certain events are most likely to occur.**
+will teach you when certain events are most likely to occur.**
 
 <p align="center">
-    <b>Outcome</b> <i>defined by you</i> ← is driven by <b>certain combinations of factors</b> <u><i>identified by ambre</i></u>
+    <font size="4">
+        <b>Outcome</b> <i>defined by you</i> ← is driven by <b>certain combinations of factors</b> <u><i>identified by ambre</i></u>
+    </font>
 </p>
 
 Unlike other approaches, ambre identifies more than just columns and their influence on outcomes. Instead, it finds
-concrete value combinations leading to certain outcomes, accompanied by tangible statistics. For instance, ambre is able
-to tell you (from unclear data) that a certain to-be-fixed defect occurs with a probability of 92% if the product has
-has extra feature *XYZ*, and if it has been produced overnight.
+concrete value combinations leading to certain outcomes, accompanied by tangible statistics. Because ambre analyzes on a very detailed level, while filtering out "the noise", it helps you to derive very precise and targeted business decisions and actions.
 
-Because ambre analyzes on a very detailed level, while filtering out "the noise", it helps you to derive very precise and targeted business decisions and actions.
-
-**ambre is here to help find the needle in the haystack -- fast and actionable.**
+**ambre helps find the needle in the haystack -- fast and actionable.**
 
 
 ## Example Use Cases

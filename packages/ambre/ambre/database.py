@@ -160,13 +160,22 @@ class Database:
         Insert a common sense rule.
 
         Common sense rules and rules that become redundant by the specified common sense rules are not returned when
-        rules are derived. This helps concentrating on rules not known before.
+        rules are derived. This helps concentrating on unknown rules.
         """
         self.insert_common_sense_rules([CommonSenseRule(self, antecedents, consequents, confidence)])
 
     def get_common_sense_rules(self):
         """Return the common sense rules."""
         return self.common_sense_rules
+
+    def remove_common_sense_rule(self, antecedents, consequents, confidence):
+        """Remove the given common sense rule."""
+        common_sense_rule_to_delete = CommonSenseRule(self, antecedents, consequents, confidence)
+        self.common_sense_rules = [
+            common_sense_rule
+            for common_sense_rule in self.common_sense_rules
+            if common_sense_rule != common_sense_rule_to_delete
+        ]
 
     def clear_common_sense_rules(self):
         """Clear all common sense rules."""
@@ -491,7 +500,6 @@ class Database:
         result = pd.DataFrame(self.derive_rules_columns_dict(*args, **kwargs))
         for list_column in ["consequents", "antecedents"]:
             result[list_column] = result[list_column].map(self.settings.item_separator_for_string_outputs.join)
-        # result = result.sort_values(by=["confidence", "support"], ascending=[False, True])
         return result
 
     def derive_rules_excel(self, filename, *args, **kwargs):
@@ -510,18 +518,19 @@ class Database:
         """
         self.derive_rules_pandas(*args, **kwargs).to_csv(filename, header=True, index=False)
 
-    def predict_consequents_records(
+    def predict_consequents_list(
         self,
         antecedents: Union[Iterable[str], None] = None,
         consequents: Union[Iterable[str], None] = None,
         skip_unknown_antecedents=False,
-    ) -> dict:
+    ) -> list:
         """
         Return the probabilities for all or only for the given consequents, assuming the given antecedents hold true.
 
         Unknown antecedents can be skipped if skip_unknown_antecedents is set to True.
         If no antecedents are given, prior probabilities are returned.
         If no explicit consequents are specified, probabilities for all consequents are computed.
+        Common-sense rules are considered.
         """
         total_result = []
         normalized_antecedents = (
@@ -543,26 +552,48 @@ class Database:
 
         for compressed_consequent in compressed_consequents_to_iterate:
             probability = None
-            try:
-                if len(compressed_antecedents) > 0:
-                    # posterior probability requested
-                    # Bayes' Theorem
-                    # P(consequent | antecedents) = P(consequent ∩ antecedents) / P(antecedents)
-                    p_consequent_intersect_antecedents = self.itemsets_trie.get_node_from_compressed(
-                        [compressed_consequent] + compressed_antecedents, skip_unknown_antecedents
-                    ).support
-                    p_antecedents = self.itemsets_trie.get_node_from_compressed(
-                        compressed_antecedents, skip_unknown_antecedents
-                    ).support
-                    probability = p_consequent_intersect_antecedents / p_antecedents if p_antecedents else None
-                else:
-                    # prior probability requested
-                    # P(consequent) is a simple lookup from the trie
-                    probability = self.itemsets_trie.get_node_from_compressed(
-                        [compressed_consequent], skip_unknown_antecedents
-                    ).support
-            except ValueError:
-                pass
+            # common-sense rule first
+            for common_sense_rule in self.common_sense_rules:
+                if compressed_consequent in common_sense_rule.consequents_compressed and (
+                    (
+                        not skip_unknown_antecedents
+                        and compressed_antecedents == common_sense_rule.antecedents_compressed
+                    )
+                    or (
+                        skip_unknown_antecedents
+                        # faster expression of compressed_antecedents.issuperset(common_sense_rule.antecedents_compressed)
+                        and all(
+                            antecedent_compressed in compressed_antecedents
+                            for antecedent_compressed in common_sense_rule.antecedents_compressed
+                        )
+                    )
+                ):
+                    probability = common_sense_rule.confidence
+
+            # else try to get the result from the itemset trie
+            if probability is None:
+                try:
+                    if len(compressed_antecedents) > 0:
+                        # posterior probability requested
+                        # Bayes' Theorem
+                        # P(consequent | antecedents) = P(consequent ∩ antecedents) / P(antecedents)
+                        p_consequent_intersect_antecedents = self.itemsets_trie.get_node_from_compressed(
+                            [compressed_consequent] + compressed_antecedents, skip_unknown_antecedents
+                        ).support
+                        p_antecedents = self.itemsets_trie.get_node_from_compressed(
+                            compressed_antecedents, skip_unknown_antecedents
+                        ).support
+                        probability = p_consequent_intersect_antecedents / p_antecedents if p_antecedents else None
+                    else:
+                        # prior probability requested
+                        # P(consequent) is a simple lookup from the trie
+                        probability = self.itemsets_trie.get_node_from_compressed(
+                            [compressed_consequent], skip_unknown_antecedents
+                        ).support
+                except ValueError:
+                    pass
+
+            # add to result
             total_result.append(
                 {
                     "antecedents": normalized_antecedents,
@@ -579,9 +610,9 @@ class Database:
         """
         Determine consequent probabilities given certain antecedents and return result as pandas dataframe.
 
-        See predict_consequents_records() for parameter descriptions.
+        See predict_consequents_list() for parameter descriptions.
         """
-        result = pd.DataFrame(self.predict_consequents_records(*args, **kwargs)).replace([np.nan], [None])
+        result = pd.DataFrame(self.predict_consequents_list(*args, **kwargs)).replace([np.nan], [None])
         for list_column in ["antecedents"]:
             result[list_column] = result[list_column].map(self.settings.item_separator_for_string_outputs.join)
         return result

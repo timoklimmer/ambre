@@ -1,36 +1,29 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/logo_gh_readme_dark_mode.png">
+  <img alt="ambre" src="images/logo_gh_readme_light_mode.png" style="display: block; margin-left: auto; margin-right: auto; width: 50%" />
+</picture>
+
+ambre is a Python package for "association mining-based rules extraction". In a nutshell: **Give it your data, and it
+will teach you in which situations certain events are most likely to occur.**
+
 <p align="center">
-    <img src="logo/logo_small.png"/>
+    <b>Outcome</b> <i>defined by you</i> ← is driven by <b>certain combinations of factors</b> <u><i>identified by ambre</i></u>
 </p>
 
-# ambre
+Unlike other approaches, ambre identifies more than just columns and their influence on outcomes. Instead, it finds
+concrete value combinations leading to certain outcomes, accompanied by tangible statistics. For instance, ambre is able
+to tell you (from unclear data) that a certain to-be-fixed defect occurs with a probability of 92% if the product has
+has extra feature *XYZ*, and if it has been produced overnight.
 
-ambre is a package for association mining-based rules extraction. It processes your data and extracts rules of interest
-for you, in the form of:
+Because ambre analyzes on a very detailed level, while filtering out "the noise", it helps you to derive very precise and targeted business decisions and actions.
 
-<p align="center">
-<i><b>which factors</b> (identified for you by ambre) <b>--lead to--></b> <b>which outcomes of interest</b> (defined by
-you)
-<br/>
-at confidence = x%, with support = n cases
-</i>
-</p>
+**ambre is here to help find the needle in the haystack -- fast and actionable.**
 
-**To put in a nutshell: Give it your data, and it tells you under which circumstances your outcomes of interest occur.**
-
-In contrast to other approaches like deriving feature importances, it tells you more than just columns and their
-influence on outcomes. Instead, it tells you exactly which *combinations* of *concrete* values lead to your outcomes,
-together with tangible statistics that let you easily retrace results.
-
-Extracted rules are minimal. Besides, there are multiple settings to control the rule extraction. In practice, that
-means that you can concentrate on the rules that really matter (also read *Common Sense Filter* below).
-
-**ambre is here to help you find the needle in the haystack -- fast and actionable.**
 
 ## Example Use Cases
 ### Reduce Defects in a Production Line
-For instance, imagine you had to manage a production line, and your production produces too many defects. Through
-traditional machine learning approaches, you would learn for example that (a) your machine vendors as well as (b) the
-material used are highly correlated with the number of defects encountered.
+Imagine you had to manage a production line, and your production produces too many defects. Through traditional machine
+learning approaches, you may learn for example that your machine vendors as well as the used material are highly correlated with the number of defects encountered.
 
 Contrary, ambre would tell you that a defect occurs at a confidence of 83% when the vendor is *"Litware Inc."* and
 material "Nylon 23A-B" is used, having seen 1.234 cases of that in your data.
@@ -41,14 +34,29 @@ factors.
 ### Increase Customer Satisfaction of a Service Desk
 Another example: imagine you were responsible for a service desk. Your CSAT score is terribly low, and you need more
 insight into where you can take targeted countermeasures. One option is to sift through numerous reports and try to find
-exactly that one bar chart which makes your life good again. The other option is to feed ambre with your feedback and
-ticket data. Once fed, ambre can show you in a snap where to look at and prioritize.
+exactly that one bar chart which makes your life good again. The other option is to feed ambre with data about your
+tickets and related CSAT scores. Once fed, ambre can show you in a snap where the problematic patterns are.
 
-## More Highlights
+### Identify Promising Research Directions
+Let's imagine you were a researcher, and your goal was to explain why people develop a certain disease. Assuming you did not have an idea of where to go deeper in your research, you could collect some data of what you think might be
+relevant.
+
+After being fed with your data, ambre can extract relevant connections, helping you to find the areas where you should focus on. Because ambre automatically eliminates redundant rules, and because you can tell ambre about the rules you already know, it will quickly point you to the connections that matter for your work. Of course, ambre also gives you all the numbers it uses, so you can write comprehensible and reproducable papers.
+
+
+## Selected Highlights of ambre
+### No Tables Required
+ambre "databases" are populated with so-called "transactions". A transaction (aka. "itemset") is a set of items that
+belong together and form a case/data point. An example transaction for the production line case mentioned above could
+be: `{"Litware Inc.", "Nylon 23A-B", "Toronto Plant", "Nightshift", "CW23", "Hole"}`. Unlike with tables, where each row
+has a fixed set of items (= the cells in the row), ambre accepts arbitrary-sized transactions. **Simply add what you know
+about the respective case, and ambre will find the rules for you.**
+
+> Note: As of now, ambre supports only categorical ("string") data. For numerical data, it is recommended to convert the numbers to categories first. This is by intention to make sure that number ranges meet the domain and hence, the quality of the generated rules is not negatively affected. There might be a more automated support in future.
+
 ### Common Sense Filter
-To increase usability, ambre has a feature to filter out common sense knowledge. Let's assume you know already that
-machine model *XYZ* produces one defect after another. With the common sense feature, you can tell ambre that you know
-that already, and when it generates rules next time, it does not bother you with information you already have.
+To increase usability, ambre has a feature to filter out common sense knowledge. Let's assume you know already that a
+certain machine model produces one defect after another. With the common sense feature, you can **tell ambre that you know** that already, and when it generates rules next time, it does not bother you with information you already have.
 
 ### Online / Distributed / Federated
 When loading data into ambre, you don't have to feed it with batch data. You can add additional individual transactions
@@ -56,21 +64,15 @@ whenever desired. Because ambre's databases can be stored to files (and even byt
 online machine learning solutions. Databases can also be merged, which enables distributed training and federated
 learning architectures.
 
-### No Tables Required
-ambre databases are populated with so-called "transactions". A transaction (aka. "itemset") is a set of items that
-belong together and form a case/data point. An example transaction for the production line case mentioned above could be:
-`{"Litware Inc.", "Nylon 23A-B", "Toronto Plant", "Nightshift", "CW23", "Hole"}`. Unlike with tables where each row has
-a fixed set of items (= the cells in the row), ambre accepts arbitrary-sized transactions. Simply add what you know
-about the respective case, and ambre will find the rules for you.
-
 ### Frequent Itemsets
-ambre's main purpose is to extract rules. The required data structure underneath is however well suited for frequent
-itemset mining, too. In case you are looking for a frequent itemset mining solution "only", you can also use ambre for
-it.
+ambre's main purpose is to extract rules that lead to certain outcomes of interest. However, the required data structure
+underneath is well suited for frequent itemset mining, too. In case you are looking for a frequent itemset mining
+solution "only", you can also use ambre for it (see examples below).
 
 ### Predictions
 Once ambre has been given some data, it can also be used for predictions. One of the big advantages thereby is that it
-can predict even if you don't have all necessary data to fill a table row of a fixed schema. By ambre, you can just give it your factors ("antecedents"), and it will tell you - based on the data collected - at which probabilities the
+can predict even if you don't have all necessary data to fill a table row of a fixed schema. By ambre, you can just give
+it your factors ("antecedents"), and it will tell you - based on the data collected - at which probabilities the
 outcomes ("consequents") will occur.
 
 
@@ -134,42 +136,29 @@ from IPython.display import display
 
 from ambre import Database
 
-# load the famous titanic dataset and add the passengers that survived into our Database
-# notes: - data does not have to be a pandas dataframe. there is also methods to add non-columnar data with varying
-#          transaction sizes such as insert_transactions().
-#        - we are using "Survived=1" here because we want to know under which conditions people survived best, ie.
-#          when column "Survived" has value 1.
+# load an updated version of the well-known German credit dataset into an ambre database
+# note: we are using "credit_risk=bad" here because we want to learn when credit risk is bad
 print("Loading data...")
-database = Database(["Survived=1"], max_antecedents_length=3)
+database = Database(["credit_risk=bad"], max_antecedents_length=3)
 database.insert_from_pandas_dataframe_rows(
-    pd.read_csv("packages/ambre/tests/datasets/titanic.csv"),
-    input_columns=["Survived", "Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"],
+    pd.read_csv("packages/ambre/tests/datasets/german-credit-eur.csv")
 )
-
-# derive frequent itemsets
-print("Deriving frequent itemsets...")
-derived_itemsets = (
-    database.derive_frequent_itemsets_pandas()
-    .sort_values(by=["occurrences", "itemset_length"], ascending=[False, True])
-    .reset_index(drop=True)
-)
-display(derived_itemsets)
 
 # derive rules
 print("Deriving rules...")
-derived_rules = database.derive_rules_pandas(min_occurrences=30, min_confidence=0.7)
+derived_rules = database.derive_rules_pandas(min_confidence=0.9, min_occurrences=10)
 derived_rules = derived_rules.sort_values(by=["confidence", "occurrences"], ascending=[False, False]).reset_index(
     drop=True
 )
 display(derived_rules)
 
 # common sense rules
-# Let's assume for the sake of the demo here that we knew passengers with no parents or children aboard have always
-# survived. In that case, we can tell ambre about our common sense knowledge. When ambre knows about it, it will not
-# generate rules with knowledge we have already. Btw: we can add as many common sense rules as we like.
+# Let's assume for the sake of the demo here that we know already that duration of 48 months leads to a bad credit risk.
+# In that case, we can tell ambre about our common sense knowledge. When ambre knows about it, it will not generate
+# rules with knowledge we have already. Btw: we can add as many common sense rules as we like.
 print("Consider common sense knowledge...")
-database.insert_common_sense_rule(["Parch=0"], ["Survived=1"])
-derived_rules = database.derive_rules_pandas(min_occurrences=30, min_confidence=0.7)
+database.insert_common_sense_rule(["duration_in_months=48"], ["credit_risk=bad"])
+derived_rules = database.derive_rules_pandas(min_confidence=0.9, min_occurrences=10)
 derived_rules = derived_rules.sort_values(by=["confidence", "occurrences"], ascending=[False, False])
 display(derived_rules)
 ```
@@ -223,23 +212,20 @@ from IPython.display import display
 from ambre import Database
 
 # as always, we need a database first
-database = Database(["bread", "pasta"])
-database.insert_transaction(["milk", "bread"])
-database.insert_transaction(["butter"])
-database.insert_transaction(["pasta", "milk", "butter"])
-database.insert_transaction(["beer", "diapers"])
-database.insert_transaction(["milk", "bread", "butter"])
-database.insert_transaction(["pasta", "bread"])
-database.insert_transaction(["bread"])
+database = Database(["smoker"])
+database.insert_transaction(["smoker", "father smokes", "mother smokes", "poor diet", "adiposity"])
+database.insert_transaction(["smoker", "good diet", "father smokes", "vegetarian", "single"])
+database.insert_transaction(["non-smoker", "married", "meat lover", "adiposity"])
+database.insert_transaction(["smoker", "married", "vegetarian", "father smokes"])
+database.insert_transaction(["non-smoker", "good diet", "mother smokes", "likes parties"])
+database.insert_transaction(["non-smoker", "vegetarian", "poor diet", "married"])
+database.insert_transaction(["smoker", "single", "likes parties"])
 
-# how likely is it that bread or pasta are also bought when someone buys milk?
-display(database.predict_consequents_pandas(["milk"]))
-
-# -> When milk is bought, the probability that bread is also bought, is at 2/3,
-#    and the probability that pasta is also bought is at 1/3.
+# how likely is it that a person is a smoker given that he/she has adipositas and his/her father smokes?
+display(database.predict_consequents_pandas(["adiposity", "father smokes"]))
 
 # to skip unknown antecedents, use the skip_unknown_antecedents flag
-display(database.predict_consequents_pandas(["milk", "potatoes"], skip_unknown_antecedents=True))
+display(database.predict_consequents_pandas(["adiposity", "hates smoking"], skip_unknown_antecedents=True))
 ```
 
 
@@ -258,22 +244,21 @@ display(database.predict_consequents_pandas(["milk", "potatoes"], skip_unknown_a
 |Lift|The support of the whole rule divided by the support expected under independence. Greater lift values indicate stronger assumptions.|
 
 
-## Performance
-ambre can bring valuable benefits for business, but under certain circumstances its runtime performance might not meet
-your needs. Compared to other machine learning algorithms, it has to create a lot of combinations and store them in an
-internal trie data structure. This can take a lot of time, and it seems there is no workaround or smarter method yet.
+## Runtime Performance
+For ambre to work, it needs a lot of data stored in an internal trie data structure. Setting up and processing that trie
+can be time-consuming. The good news however is that ambre's performance is highly dependent on how you configure it.
 
-The good news is that ambre's performance is highly dependent on its configuration. To improve ambre's performance, you
-can set a couple of parameters when creating the database and/or later when using the database.
+Here are a few hints:
 
-Whenever possible, you should prefer to set the parameters at the database level, because that helps filter data as
-early as possible, avoiding unnecessary workload at later steps. Note however that some parameters can only be set at
-the respective methods used after the database has been populated.
+- To improve ambre's performance, you can set a couple of parameters when creating the database and/or later when using
+the database. Whenever possible, you should prefer to set the parameters at the database level because that helps filter out data as early as possible, avoiding unnecessary workload at later steps. Note however that some parameters can only be set after the database has been populated.
 
 - `max_antecedents_length` (integer) controls how many antecedents are returned per rule at maximum when frequent
 itemsets or rules are generated. In most of the cases, you are only interested in maybe 3 or 5 antecedents anyway
-because results with more antecedents get confusing. It is recommended to set the parameter to a reasonable value when creating the Database object. Setting max_antecedents_length right can bring dramatic performance improvements (and
-memory savings). Note that you can safely use a low parameter value. Results will still be correct, it will just not generate rules with more than the specified antecedents.
+because results with more antecedents get confusing. It is recommended to set the parameter to a reasonable value when
+creating the Database object. Setting max_antecedents_length right can bring dramatic performance improvements (and
+memory savings). Note that you can safely use a low parameter value. Results will still be correct, it will just not
+generate rules with more than the specified antecedents.
 
 - `min_occurrences` (integer) controls how many occurences are needed at minimum for consideration. In many cases, you
 would filter out results with too few occurences anyway. Setting a min_occurences value can speed up things because less
@@ -285,23 +270,38 @@ reduce data that needs to be processed and hence speed up things.
 
 - `item_alphabet` (string) defines which characters can be used in the item names. ambre has a feature which compresses
 item names internally, to save memory. If you already know that your item names contain only alphanumeric characters,
-for example, you can set this parameter for example to `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ`. The more narrow the item alphabet, the more memory savings and performance. You can specify any unique sequence of characters here. To completely disable item compression, set this parameter to None.
+for example, you can set this parameter for example to `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ`. The more narrow the item
+alphabet, the more memory savings and performance. You can specify any unique sequence of characters here. To completely
+disable item compression, set this parameter to None.
 
 - `case_insensitive` (bool) controls whether casing is relevant or not. By default, ambre has this parameter set to
 TRUE. If you change it to FALSE - meaning that you differentiate between upper and lower case letters - be sure that you
 actually need it. Case insensitivity needs less memory and performs faster.
 
-Furthermore, it is always a good idea not to pass irrelevant data to ambre. You are probably not interested in data
+- Furthermore, it is always a good idea not to pass irrelevant data to ambre. You are probably not interested in data
 coming from technical fields such as "created_at", "is_deleted" etc. Removing/not passing such data will improve ambre's
-performance.
+performance. When using the `insert_from_pandas_dataframe_rows` method, you can use the `input_columns` parameter to
+load only relevant columns.
 
-Similarly, the shorter the item names are in your transactions, the better. Also, prefer short column names over longer ones when memory becomes an issue.
+- Similarly, the shorter the item names are in your transactions, the better. Also, prefer short column names over
+longer ones when memory becomes an issue.
 
-In some cases you may also be able to group individual items to a group. Grouped items mean less items, and the less
+- In some cases you may also be able to group individual items to a group. Grouped items mean less items, and the less
 items you have, the faster is ambre because it needs to deal with less data then.
 
-If performance is still not sufficient, you can also try distributing the training, as suggested above.
+- When the insert performance is a problem, distributing the training, as suggested above, can help.
 
+- Depending on the use case, there may also be a way to work with multiple smaller databases instead of  a single big one.
+
+- The newer your Python version, the better.
+
+...and sometimes, your hardware may just not be fast or large enough. In that case, try to run ambre on a larger VM, ideally in Microsoft Azure ;-)
+
+## Why "ambre"?
+ambre stands for ***a***ssociation ***m***ining-***b***ased ***r***ules ***e***xtraction. Just in case you have ever
+wondered 😉.
 
 ## Disclaimer
 As always - feel free to use but don't blame me if things go wrong.
+
+To avoid any misunderstandings: ambre is not an official Microsoft product.

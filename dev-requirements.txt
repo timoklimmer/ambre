@@ -1,0 +1,9 @@
+# required for package development,
+# packages required by ambre at run time are installed during installation of the ambre package
+pytest
+pytest-benchmark
+black
+pylint
+pycodestyle
+pydocstyle
+faker

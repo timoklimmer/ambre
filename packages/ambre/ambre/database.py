@@ -26,6 +26,16 @@ class Database:
     AMBRE_PACKAGE_VERSION = AMBRE_PACKAGE_VERSION
     DATABASE_SCHEMA_VERSION = AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION
 
+    @property
+    def number_transactions(self):
+        """Return the number of inserted transactions."""
+        return self.itemsets_trie.number_transactions
+
+    @property
+    def number_nodes(self):
+        """Return the number of nodes in the underlying itemset trie."""
+        return self.itemsets_trie.number_nodes
+
     def __init__(
         self,
         consequents=[],
@@ -85,29 +95,46 @@ class Database:
                     frozenset(f"{column}{column_value_separator}{row[column]}" for column in columns)
                 )
 
-    def insert_transactions(self, transactions, show_progress=True):
-        """Insert the given transactions, optionally sampling to enable larger datasets."""
-        transaction_iterator = tqdm(transactions, total=len(transactions)) if show_progress else transactions
-        for transaction in transaction_iterator:
-            self.insert_transaction(transaction)
-
     def insert_transaction(self, transaction):
         """Insert the given transaction."""
-        self.itemsets_trie.insert_normalized_consequents_antecedents_compressed(
+        self.itemsets_trie.insert_consequents_antecedents_compressed(
             *self.prepostprocessor.extract_consequents_antecedents_compressed_from_uncompressed(
                 self.prepostprocessor.normalize_uncompressed_itemset(transaction, sort_result=False), sort_result=True
             )
         )
 
-    @property
-    def number_transactions(self):
-        """Return the number of inserted transactions."""
-        return self.itemsets_trie.number_transactions
+    def insert_transactions(self, transactions, show_progress=True):
+        """Insert the given transactions."""
+        transaction_iterator = tqdm(transactions, total=len(transactions)) if show_progress else transactions
+        for transaction in transaction_iterator:
+            self.insert_transaction(transaction)
 
-    @property
-    def number_nodes(self):
-        """Return the number of nodes in the underlying itemset trie."""
-        return self.itemsets_trie.number_nodes
+    def has_transaction(self, transaction):
+        """Check if the given transaction is contained in the database."""
+        consequents, antecedents = self.prepostprocessor.extract_consequents_antecedents_compressed_from_uncompressed(
+            self.prepostprocessor.normalize_uncompressed_itemset(transaction, sort_result=False), sort_result=True
+        )
+        transaction = consequents + antecedents
+        return self.itemsets_trie.has_consequents_antecedents_compressed(transaction)
+
+    def has_transactions(self, transactions):
+        """Check if the given transactions are contained in the database."""
+        return all(self.has_transaction(transaction) for transaction in transactions)
+
+    def remove_transaction(self, transaction, silent=False):
+        """Remove the given transaction."""
+        self.itemsets_trie.remove_consequents_antecedents_compressed(
+            *self.prepostprocessor.extract_consequents_antecedents_compressed_from_uncompressed(
+                self.prepostprocessor.normalize_uncompressed_itemset(transaction, sort_result=False), sort_result=True
+            ),
+            silent,
+        )
+
+    def remove_transactions(self, transactions, show_progress=True):
+        """Remove the given transactions."""
+        transaction_iterator = tqdm(transactions, total=len(transactions)) if show_progress else transactions
+        for transaction in transaction_iterator:
+            self.remove_transaction(transaction)
 
     def insert_common_sense_rules(self, common_sense_rules_to_insert):
         """

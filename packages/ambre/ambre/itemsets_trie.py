@@ -86,7 +86,7 @@ class ItemsetsTrie:
             return "\n".join(result_lines)
         return None
 
-    def get_node_from_compressed(self, compressed_itemset, skip_unknown_items=False):
+    def get_node_from_compressed(self, compressed_itemset, skip_unknown_items=False, none_if_not_exists=False):
         """Get the itemset node from the trie representing the specified itemset (assuming compressed items)."""
         if not compressed_itemset:
             raise ValueError("Parameter 'compressed_itemset' is None or empty.")
@@ -97,6 +97,8 @@ class ItemsetsTrie:
                 node = node.children[compressed_item]
             else:
                 # item is unknown
+                if none_if_not_exists:
+                    return None
                 if not skip_unknown_items:
                     # skip_unknown_items is false -> raise exception
                     uncompressed_itemset = [
@@ -210,7 +212,7 @@ class ItemsetsTrie:
         self.visit_itemset_nodes_depth_first(_append_if_first_antecedent, only_with_consequents=True)
         return result
 
-    def insert_normalized_consequents_antecedents_compressed(self, consequents, antecedents):
+    def insert_consequents_antecedents_compressed(self, consequents, antecedents):
         """Insert the given normalized and compressed transaction into the trie."""
         # basic approach: for each node, add all items that follow that node in the itemset as children.
         #                 an itemset of size n leads to 2**n-1 nodes.
@@ -236,6 +238,36 @@ class ItemsetsTrie:
             deque(map(_create_or_update_child_node, itemset_plus_meta[start_index:]), maxlen=0)
 
         self.number_transactions += 1
+
+    def has_consequents_antecedents_compressed(self, itemset):
+        """Check if the trie has the given normalized and compression transaction."""
+        return self.get_node_from_compressed(itemset, none_if_not_exists=True) is not None
+
+    def remove_consequents_antecedents_compressed(self, consequents, antecedents, silent):
+        """Remove the given normalized and compressed transaction from the trie."""
+        transaction_normalized_compressed = consequents + antecedents
+        # ensure that the trie has transactions
+        if self.number_transactions == 0:
+            raise ValueError("The database is empty. There are no transactions to remove.")
+        # ensure that the transaction exists
+        if not self.has_consequents_antecedents_compressed(transaction_normalized_compressed):
+            if silent:
+                return
+            raise ValueError(
+                f"The transaction {consequents + antecedents} cannot be removed because it was not inserted before."
+            )
+        # navigate through and update the trie
+        for start_index in range(len(transaction_normalized_compressed)):
+            leaf_node = self.get_node_from_compressed(transaction_normalized_compressed[start_index:])
+            current_node = leaf_node
+            while current_node is not self.root_node:
+                current_node.occurrences -= 1
+                if current_node.occurrences == 0:
+                    del current_node.parent_node.children[current_node.compressed_item]
+                    self.number_nodes -= 1
+                current_node = current_node.parent_node
+        # update the number of transactions
+        self.number_transactions -= 1
 
     def merge(self, itemsets_trie):
         """Merge the given itemsets trie into this itemsets trie."""

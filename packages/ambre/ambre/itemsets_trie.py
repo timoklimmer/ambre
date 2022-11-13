@@ -188,8 +188,8 @@ class ItemsetsTrie:
         def _collect_result(node):
             if node.is_consequent:
                 result.append(node)
-            else:
-                return "skip_children"
+                return None
+            return "skip_children"
 
         self.visit_itemset_nodes_depth_first(_collect_result, only_with_consequents=True)
         return result
@@ -314,7 +314,7 @@ class ItemsetNode(dataobject):
             f"{'(' if node.is_consequent else ''}"
             f"{decompress_string(node.compressed_item, original_input_alphabet=self.itemsets_trie.item_alphabet)}"
             f"{')' if node.is_consequent else ''}"
-            for node in self.itemset_nodes_sorted
+            for node in self.itemset_items_compressed_sorted
         ]
         return self.itemsets_trie.item_separator_for_string_outputs.join(decompressed_items)
 
@@ -358,8 +358,8 @@ class ItemsetNode(dataobject):
         return None
 
     @property
-    def itemset_nodes_sorted(self):
-        """Return a sorted list of the itemset's nodes (consequents first, items sorted within their groups)."""
+    def itemset_items_compressed_sorted(self):
+        """Return a sorted list of the compressed itemset's nodes (consequents first, items sorted within groups)."""
         result = []
         iterated_node = self
         while iterated_node.parent_node is not None:
@@ -372,7 +372,7 @@ class ItemsetNode(dataobject):
         """Return itemset represented by this node, sorted by uncompressed items with consequences first."""
         return [
             decompress_string(node.compressed_item, original_input_alphabet=self.itemsets_trie.item_alphabet)
-            for node in self.itemset_nodes_sorted
+            for node in self.itemset_items_compressed_sorted
         ]
 
     @property
@@ -427,7 +427,7 @@ class ItemsetNode(dataobject):
 
     @property
     def consequents_antecedents_compressed(self):
-        """Return the itemset's consequents and antecedents."""
+        """Return the itemset's consequents and antecedents, compressed."""
         antecedents_compressed = []
         consequents_compressed = []
         iterated_node = self
@@ -440,28 +440,40 @@ class ItemsetNode(dataobject):
         return consequents_compressed, antecedents_compressed
 
     @property
+    def consequents_antecedents_uncompressed(self):
+        """Return the itemset's consequents and antecedents, uncompressed."""
+        consequents_compressed, antecedents_compressed = self.consequents_antecedents_compressed
+        return [
+            decompress_string(item, original_input_alphabet=self.itemsets_trie.item_alphabet)
+            for item in consequents_compressed
+        ], [
+            decompress_string(item, original_input_alphabet=self.itemsets_trie.item_alphabet)
+            for item in antecedents_compressed
+        ]
+
+    @property
     def support(self):
         """Return the itemset's relative support."""
         return self.occurrences / self.itemsets_trie.number_transactions
 
     @property
     def confidence(self):
-        """Return the itemset's confidence."""
+        """Return the confidence of the rule antecedents => consequents."""
         antecedents_compressed = self.antecedents_compressed
         if antecedents_compressed:
             return self.support / self.itemsets_trie.get_node_from_compressed(antecedents_compressed).support
-        return 1
+        return 1.0
 
     @property
     def lift(self):
-        """Return the itemset's confidence."""
+        """Return the lift of the rule antecedents => consequents."""
         consequents_compressed, antecedents_compressed = self.consequents_antecedents_compressed
         if antecedents_compressed and consequents_compressed:
             return self.support / (
                 self.itemsets_trie.get_node_from_compressed(antecedents_compressed).support
                 * self.itemsets_trie.get_node_from_compressed(consequents_compressed).support
             )
-        return 1
+        return 1.0
 
     def get_or_create_child(self, item, is_consequent, item_is_compressed=False):
         """Get or create a child node."""

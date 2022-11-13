@@ -109,17 +109,36 @@ class Database:
         for transaction in transaction_iterator:
             self.insert_transaction(transaction)
 
-    def has_transaction(self, transaction):
-        """Check if the given transaction is contained in the database."""
+    def has_itemset(self, transaction):
+        """Check if the given itemset is contained in the database."""
         consequents, antecedents = self.prepostprocessor.extract_consequents_antecedents_compressed_from_uncompressed(
             self.prepostprocessor.normalize_uncompressed_itemset(transaction, sort_result=False), sort_result=True
         )
         transaction = consequents + antecedents
         return self.itemsets_trie.has_consequents_antecedents_compressed(transaction)
 
-    def has_transactions(self, transactions):
-        """Check if the given transactions are contained in the database."""
-        return all(self.has_transaction(transaction) for transaction in transactions)
+    def get_itemset(self, itemset, skip_unknown_items=False, none_if_not_exists=False):
+        """Return the given itemset and related information."""
+        normalized_itemset = self.prepostprocessor.normalize_uncompressed_itemset(itemset, sort_result=True)
+        consequents, antecedents = self.prepostprocessor.extract_consequents_antecedents_compressed_from_uncompressed(
+            normalized_itemset, sort_result=True
+        )
+        trie_node = self.itemsets_trie.get_node_from_compressed(
+            consequents + antecedents, skip_unknown_items, none_if_not_exists
+        )
+        if trie_node:
+            consequents_uncompressed, antecedents_uncompressed = trie_node.consequents_antecedents_uncompressed
+            result = {
+                "itemset": trie_node.itemset_items_uncompressed_sorted,
+                "consequents": consequents_uncompressed,
+                "antecedents": antecedents_uncompressed,
+                "occurrences": trie_node.occurrences,
+                "support": trie_node.support,
+            }
+            if consequents_uncompressed:
+                result.update({"confidence": trie_node.confidence, "lift": trie_node.lift})
+            return result
+        return None
 
     def remove_transaction(self, transaction, silent=False):
         """Remove the given transaction."""
@@ -129,12 +148,6 @@ class Database:
             ),
             silent,
         )
-
-    def remove_transactions(self, transactions, show_progress=True):
-        """Remove the given transactions."""
-        transaction_iterator = tqdm(transactions, total=len(transactions)) if show_progress else transactions
-        for transaction in transaction_iterator:
-            self.remove_transaction(transaction)
 
     def insert_common_sense_rules(self, common_sense_rules_to_insert):
         """

@@ -52,8 +52,8 @@ def test_removal_of_one_of_two_equal_transactions():
     original_transaction_count = database.number_transactions
     database.remove_transaction(["milk", "bread", "butter"])
     assert database.number_transactions == original_transaction_count - 1
-    assert database.has_transaction(["milk", "bread"]) is True
-    assert database.has_transaction(["milk", "bread", "butter"]) is True
+    assert database.has_itemset(["milk", "bread"]) is True
+    assert database.has_itemset(["milk", "bread", "butter"]) is True
 
 
 def test_removal_of_multiple_transactions():
@@ -64,7 +64,9 @@ def test_removal_of_multiple_transactions():
     database.insert_transaction(["milk", "bread", "butter"])
     database.insert_transaction(["bread"])
     original_transaction_count = database.number_transactions
-    database.remove_transactions([["milk", "bread", "butter"], ["milk", "bread", "butter"]])
+    database.remove_transaction(["milk", "bread", "butter"])
+    database.remove_transaction(["milk", "bread", "butter"])
     assert database.number_transactions == original_transaction_count - 2
-    assert database.has_transaction(["milk", "bread"]) is True
-    assert database.has_transaction(["milk", "bread", "butter"]) is False
+    assert database.get_itemset(["milk", "bread", "butter"], none_if_not_exists=True) is None
+    assert database.has_itemset(["milk", "bread"]) is True
+    assert database.has_itemset(["milk", "bread", "butter"]) is False

@@ -10,7 +10,7 @@ will tell you when certain outcomes are most likely to occur.**
 
 <p align="center">
     <font size="4">
-        <b>Outcome</b> <i>defined by you</i> ← is driven by <b>certain combinations of factors</b> <u><i>identified by ambre</i></u>
+        <b>Outcomes</b> <i>defined by you</i> ← are driven by <b>certain factor combinations</b> <u><i>identified by ambre</i></u>
     </font>
 </p>
 

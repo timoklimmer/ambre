@@ -6,7 +6,7 @@
 ---
 
 ambre is a Python package for "association mining-based rules extraction". In a nutshell: **Give it your data, and it
-will teach you when certain outcomes are most likely to occur.**
+will tell you when certain outcomes are most likely to occur.**
 
 <p align="center">
     <font size="4">
@@ -74,6 +74,11 @@ Once ambre has been given some data, it can also be used for predictions. One of
 can predict even if you don't have all necessary data to fill a table row of a fixed schema. By ambre, you can just give
 it your factors ("antecedents"), and it will tell you - based on the data collected - at which probabilities the
 outcomes ("consequents") will occur.
+
+### Sliding Window Contents
+Similarly to how transactions are added to ambre, they can also be removed from it. By removing transactions, a sliding window pattern can be implemented, which effectively avoids that data from the past has too much impact on current
+analyzes / predictions.
+
 
 
 ## Installation

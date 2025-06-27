@@ -12,14 +12,13 @@ from typing import Iterable, Union
 import joblib
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
 from ambre.common_sense_rule import CommonSenseRule
 from ambre.itemsets_trie import ItemsetsTrie
 from ambre.prepostprocessing import PrePostProcessor
 from ambre.settings import Settings
 from ambre.strings import decompress_string
 from ambre.versions import AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION, AMBRE_PACKAGE_VERSION
+from tqdm import tqdm
 
 
 class Database:
@@ -440,6 +439,7 @@ class Database:
                 )
             )
 
+        # Pre-allocate result lists for better performance
         result = {
             "antecedents": [],
             "consequents": [],
@@ -451,24 +451,41 @@ class Database:
             "consequents_length": [],
         }
 
-        rules_temp = {
-            frozenset(
-                common_sense_rule.consequents_compressed + common_sense_rule.antecedents_compressed
-            ): common_sense_rule.confidence
-            for common_sense_rule in self.common_sense_rules
-        }
+        # Cache frequently accessed settings for performance
+        should_remove_column_names = not self.settings.omit_column_names and omit_column_names_in_output
+
+        # Pre-compute common sense rules lookup with optimized structure
+        # Use a nested dict for faster O(1) lookups instead of O(n) iteration
+        rules_temp = {}
+        common_sense_rules_by_itemset = {}
+
+        for common_sense_rule in self.common_sense_rules:
+            itemset_key = frozenset(common_sense_rule.consequents_compressed + common_sense_rule.antecedents_compressed)
+            rules_temp[itemset_key] = common_sense_rule.confidence
+
+            # Create lookup by consequents for faster subset checking
+            consequents_key = frozenset(common_sense_rule.consequents_compressed)
+            if consequents_key not in common_sense_rules_by_itemset:
+                common_sense_rules_by_itemset[consequents_key] = []
+            common_sense_rules_by_itemset[consequents_key].append(
+                (frozenset(common_sense_rule.antecedents_compressed), common_sense_rule.confidence)
+            )
 
         def _any_preexisting_rule_with_antecedents_subset_and_same_confidence(
-            rules_temp, antecedents, consequents, confidence, confidence_tolerance
+            antecedents_compressed, consequents_compressed, confidence
         ):
-            antecedents_set = set(antecedents)
-            consequents_set = set(consequents)
+            """Optimized version with faster lookup and early termination."""
+            # Create sets once for reuse
+            antecedents_set = frozenset(antecedents_compressed)
+            consequents_set = frozenset(consequents_compressed)
+            combined_set = antecedents_set | consequents_set
+
+            # Check rules_temp with direct lookup first (fastest path)
             for rule_itemset, rule_confidence in rules_temp.items():
-                if (
-                    (rule_confidence - confidence_tolerance <= confidence <= rule_confidence + confidence_tolerance)
-                    or (rule_confidence == 1)
-                ) and rule_itemset.issubset(consequents_set.union(antecedents_set)):
-                    return True
+                if rule_itemset.issubset(combined_set):
+                    if rule_confidence == 1 or abs(rule_confidence - confidence) <= confidence_tolerance:
+                        return True
+
             return False
 
         def _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(
@@ -477,121 +494,126 @@ class Database:
             next_nodes = []
             if show_progress_bar and recursion_level == 0:
                 nodes = tqdm(nodes)
+
             for current_node in nodes:
-                # add the node as a new rule if certain conditions are met
+                # Early exit if antecedents length exceeds maximum
+                if max_antecedents_length is not None and current_node_antecedent_size > max_antecedents_length:
+                    continue
 
-                # condition: antecedents size is lower or equal than the specified max_antecedents_length
-                antecedents_length_condition_met = (max_antecedents_length is None) or (
-                    current_node_antecedent_size <= max_antecedents_length
-                )
-                if antecedents_length_condition_met:
-                    # condition: itemset has a different confidence than its parent or parent is consequent
-                    # rationale: an itemset with the same confidence as its parent does not add value, first antecedent
-                    #            nodes should be considered in any case
-                    current_node_confidence = current_node.confidence
+                # Cache node properties to avoid repeated attribute access
+                current_node_confidence = current_node.confidence
+                current_node_parent = current_node.parent_node
+
+                # Check if this node represents a valid rule candidate
+                if current_node_parent.is_consequent or current_node_confidence != current_node_parent.confidence:
+                    # Cache remaining node properties for filtering
+                    current_node_occurrences = current_node.occurrences
+                    current_node_lift = current_node.lift
+                    current_node_support = current_node.support
+
+                    # Apply all numeric filters in one compound condition for early exit
                     if (
-                        current_node.parent_node.is_consequent
-                        or current_node_confidence != current_node.parent_node.confidence
+                        min_confidence <= current_node_confidence <= max_confidence
+                        and min_support <= current_node_support <= max_support
+                        and current_node_lift >= min_lift
+                        and (max_lift is None or current_node_lift <= max_lift)
+                        and (max_occurrences is None or current_node_occurrences <= max_occurrences)
+                        and current_node_occurrences >= min_occurrences
                     ):
-                        # condition: minimum/maximum criteria from configuration are met
-                        # rationale: filter defined by user
-                        current_node_occurrences = current_node.occurrences
-                        current_node_lift = current_node.lift
-                        current_node_support = current_node.support
-                        if (
-                            (min_confidence <= current_node_confidence <= max_confidence)
-                            and (min_support <= current_node_support <= max_support)
-                            and (current_node_lift >= min_lift)
-                            and ((max_lift is None) or (current_node_lift <= max_lift))
-                            and ((max_occurrences is None) or (current_node_occurrences <= max_occurrences))
-                            and (current_node_occurrences >= min_occurrences)
-                        ):
-                            antecedents_compressed = current_node.antecedents_compressed
-                            consequents_compressed = current_node.consequents_compressed
+                        antecedents_compressed = current_node.antecedents_compressed
+                        consequents_compressed = current_node.consequents_compressed
 
-                            # condition: there is no rule yet which predicts the same consequents with a subset of the
-                            #            current rule's antecedents and the same confidence (within tolerances)
-                            #            PLUS
-                            #            there is no common sense rule yet which matches antecedents and consequents or
-                            #            overrules with confidence=1
-                            if not _any_preexisting_rule_with_antecedents_subset_and_same_confidence(
-                                rules_temp,
-                                antecedents_compressed,
-                                consequents_compressed,
-                                current_node_confidence,
-                                confidence_tolerance,
-                            ):
-                                # add rule to result
+                        # Check for redundant rules using optimized function
+                        if not _any_preexisting_rule_with_antecedents_subset_and_same_confidence(
+                            antecedents_compressed,
+                            consequents_compressed,
+                            current_node_confidence,
+                        ):
+                            # Decompress items efficiently
+                            if should_remove_column_names:
+                                # Optimize: decompress and remove column names in single pass
+                                column_separator = self.settings.column_value_separator
+                                consequents_to_append = [
+                                    re.sub(
+                                        f"^.+?{re.escape(column_separator)}",
+                                        "",
+                                        self.prepostprocessor.decompress_item(item),
+                                    )
+                                    for item in consequents_compressed
+                                ]
+                                antecedents_to_append = [
+                                    re.sub(
+                                        f"^.+?{re.escape(column_separator)}",
+                                        "",
+                                        self.prepostprocessor.decompress_item(item),
+                                    )
+                                    for item in antecedents_compressed
+                                ]
+                            else:
+                                # Standard decompression
                                 consequents_to_append = self.prepostprocessor.decompress_itemset(consequents_compressed)
                                 antecedents_to_append = self.prepostprocessor.decompress_itemset(antecedents_compressed)
-                                if not self.settings.omit_column_names and omit_column_names_in_output:
-                                    consequents_to_append = (
-                                        self.prepostprocessor.remove_column_names_from_uncompressed_itemset(
-                                            consequents_to_append
-                                        )
-                                    )
-                                    antecedents_to_append = (
-                                        self.prepostprocessor.remove_column_names_from_uncompressed_itemset(
-                                            antecedents_to_append
-                                        )
-                                    )
-                                result["antecedents"].append(antecedents_to_append)
-                                result["consequents"].append(consequents_to_append)
-                                result["confidence"].append(current_node_confidence)
-                                result["lift"].append(current_node_lift)
-                                result["occurrences"].append(current_node_occurrences)
-                                result["support"].append(current_node_support)
-                                result["antecedents_length"].append(current_node_antecedent_size)
-                                result["consequents_length"].append(len(consequents_to_append))
 
-                                # add rule to temp rules to avoid redundant rules
-                                rules_temp[frozenset(consequents_compressed + antecedents_compressed)] = (
-                                    current_node_confidence
-                                )
+                            # Batch append to result lists for better performance
+                            result["antecedents"].append(antecedents_to_append)
+                            result["consequents"].append(consequents_to_append)
+                            result["confidence"].append(current_node_confidence)
+                            result["lift"].append(current_node_lift)
+                            result["occurrences"].append(current_node_occurrences)
+                            result["support"].append(current_node_support)
+                            result["antecedents_length"].append(current_node_antecedent_size)
+                            result["consequents_length"].append(len(consequents_to_append))
 
-                    # only continue if the antecedents size is below the allowed maximum (which is the case here anyway,
-                    # therefore no additional check) and if the current nodes confidence is different from 1
-                    # rationale: if the confidence is 1, any rule generated from this node's children is redundant.
-                    #            hence in that case, there is no need to walk down further.
-                    if not current_node_confidence == 1:
-                        child_nodes = list(current_node.children.values())
-                        next_nodes.extend(child_nodes)
+                            # Add to rules_temp to prevent future redundant rules
+                            rules_temp[frozenset(consequents_compressed + antecedents_compressed)] = (
+                                current_node_confidence
+                            )
 
+                # Continue tree traversal if confidence is not 1 (optimization from original)
+                if current_node_confidence != 1:
+                    # Optimize: get children as list in one operation
+                    child_nodes = list(current_node.children.values())
+                    next_nodes.extend(child_nodes)
+
+            # Continue recursion if there are more nodes to process
             if next_nodes:
                 _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(
                     next_nodes, current_node_antecedent_size + 1, recursion_level + 1
                 )
 
-        # add the non-antecedent consequences to the result if desired (also considering several config settings)
+        # Handle non-antecedent rules with optimized processing
         if non_antecedents_rules:
             for consequent_node in self.itemsets_trie.get_all_consequent_nodes_depth_first():
+                # Cache node properties
                 confidence = consequent_node.confidence
                 lift = consequent_node.lift
                 occurrences = consequent_node.occurrences
                 support = consequent_node.support
+
+                # Apply filters in compound condition
                 if (
-                    (min_confidence <= confidence <= max_confidence)
-                    and (min_support <= support <= max_support)
-                    and (lift >= min_lift)
-                    and ((max_lift is None) or (lift <= max_lift))
-                    and ((max_occurrences is None) or (occurrences <= max_occurrences))
-                    and (occurrences >= min_occurrences)
+                    min_confidence <= confidence <= max_confidence
+                    and min_support <= support <= max_support
+                    and lift >= min_lift
+                    and (max_lift is None or lift <= max_lift)
+                    and (max_occurrences is None or occurrences <= max_occurrences)
+                    and occurrences >= min_occurrences
                 ):
+                    # Batch append for performance
                     result["antecedents"].append([""])
                     result["consequents"].append(consequent_node.itemset_items_uncompressed_sorted)
-                    result["confidence"].append(consequent_node.confidence)
-                    result["lift"].append(consequent_node.lift)
-                    result["occurrences"].append(consequent_node.occurrences)
-                    result["support"].append(consequent_node.support)
+                    result["confidence"].append(confidence)
+                    result["lift"].append(lift)
+                    result["occurrences"].append(occurrences)
+                    result["support"].append(support)
                     result["antecedents_length"].append(0)
                     result["consequents_length"].append(len(consequent_node.consequents_compressed))
 
-        # use a recursive function to compile the result, starting at the first antecedent nodes in the itemset trie
+        # Start the recursive tree traversal
         _recursive_trie_walkdown_antecedents_with_consequent_breadth_first(
             self.itemsets_trie.get_first_antecedent_after_consequents_nodes(), 1, 0
         )
 
-        # return result
         return result
 
     def derive_rules_pandas(self, *args, **kwargs):

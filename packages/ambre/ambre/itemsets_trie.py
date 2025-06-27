@@ -484,17 +484,50 @@ class ItemsetNode(dataobject):
         created_new_child = False
         if child_node is None:
             new_child_node = ItemsetNode(compressed_item, self, self.itemsets_trie, is_consequent, {}, 0)
-            item_alphabet = self.itemsets_trie.item_alphabet
-            # intentionally not using dict comprehension here for performance reasons
-            self.children = dict(
-                sorted(
-                    list(self.children.items()) + [(compressed_item, new_child_node)],
-                    key=lambda t: (
-                        not t[1].is_consequent,
-                        decompress_string(t[0], original_input_alphabet=item_alphabet),
-                    ),
-                )
-            )
+
+            # Performance optimization: avoid sorting when possible
+            if not self.children:
+                # First child - just add it
+                self.children[compressed_item] = new_child_node
+            elif len(self.children) == 1:
+                # Only one existing child - simple comparison is sufficient
+                existing_item, existing_node = next(iter(self.children.items()))
+                item_alphabet = self.itemsets_trie.item_alphabet
+
+                existing_decompressed = decompress_string(existing_item, original_input_alphabet=item_alphabet)
+                new_decompressed = decompress_string(compressed_item, original_input_alphabet=item_alphabet)
+
+                existing_sort_key = (not existing_node.is_consequent, existing_decompressed)
+                new_sort_key = (not is_consequent, new_decompressed)
+
+                if new_sort_key < existing_sort_key:
+                    # New item comes first
+                    self.children = {compressed_item: new_child_node, existing_item: existing_node}
+                else:
+                    # Existing item comes first
+                    self.children[compressed_item] = new_child_node
+            else:
+                # Multiple children - need to sort
+                item_alphabet = self.itemsets_trie.item_alphabet
+
+                # Create list of (sort_key, compressed_item, node) tuples for efficient sorting
+                items_with_keys = []
+                for existing_compressed, existing_node in self.children.items():
+                    existing_decompressed = decompress_string(
+                        existing_compressed, original_input_alphabet=item_alphabet
+                    )
+                    existing_sort_key = (not existing_node.is_consequent, existing_decompressed)
+                    items_with_keys.append((existing_sort_key, existing_compressed, existing_node))
+
+                # Add new item
+                new_decompressed = decompress_string(compressed_item, original_input_alphabet=item_alphabet)
+                new_sort_key = (not is_consequent, new_decompressed)
+                items_with_keys.append((new_sort_key, compressed_item, new_child_node))
+
+                # Sort and rebuild dict
+                items_with_keys.sort(key=lambda x: x[0])
+                self.children = {compressed: node for _, compressed, node in items_with_keys}
+
             self.itemsets_trie.number_nodes += 1
             child_node = new_child_node
             created_new_child = True

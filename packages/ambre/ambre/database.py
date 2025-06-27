@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+import re
 import sys
 import warnings
 from io import BytesIO
@@ -97,11 +98,31 @@ class Database:
 
     def insert_transaction(self, transaction):
         """Insert the given transaction."""
-        self.itemsets_trie.insert_consequents_antecedents_compressed(
-            *self.prepostprocessor.extract_consequents_antecedents_compressed_from_uncompressed(
-                self.prepostprocessor.normalize_uncompressed_itemset(transaction, sort_result=False), sort_result=True
-            )
-        )
+        consequents = []
+        antecedents = []
+
+        normalized_consequents_set = set(self.prepostprocessor.normalized_consequents)
+
+        normalize_whitespace_setting = self.settings.normalize_whitespace
+        case_insensitive_setting = self.settings.case_insensitive
+        for item in transaction:
+            normalized_item = item
+            if normalize_whitespace_setting:
+                normalized_item = normalized_item.strip()
+                if "  " in normalized_item or "\t" in normalized_item or "\n" in normalized_item:
+                    normalized_item = re.sub(r"\s+", " ", normalized_item)
+            if case_insensitive_setting:
+                normalized_item = normalized_item.lower()
+
+            if normalized_item in normalized_consequents_set:
+                consequents.append(normalized_item)
+            else:
+                antecedents.append(normalized_item)
+
+        consequents.sort(key=str.casefold)
+        antecedents.sort(key=str.casefold)
+
+        self.itemsets_trie.insert_consequents_antecedents_compressed(consequents, antecedents)
 
     def insert_transactions(self, transactions, show_progress=True):
         """Insert the given transactions."""
@@ -420,7 +441,6 @@ class Database:
                     current_node_antecedent_size <= max_antecedents_length
                 )
                 if antecedents_length_condition_met:
-
                     # condition: itemset has a different confidence than its parent or parent is consequent
                     # rationale: an itemset with the same confidence as its parent does not add value, first antecedent
                     #            nodes should be considered in any case
@@ -429,7 +449,6 @@ class Database:
                         current_node.parent_node.is_consequent
                         or current_node_confidence != current_node.parent_node.confidence
                     ):
-
                         # condition: minimum/maximum criteria from configuration are met
                         # rationale: filter defined by user
                         current_node_occurrences = current_node.occurrences
@@ -482,9 +501,9 @@ class Database:
                                 result["consequents_length"].append(len(consequents_to_append))
 
                                 # add rule to temp rules to avoid redundant rules
-                                rules_temp[
-                                    frozenset(consequents_compressed + antecedents_compressed)
-                                ] = current_node_confidence
+                                rules_temp[frozenset(consequents_compressed + antecedents_compressed)] = (
+                                    current_node_confidence
+                                )
 
                     # only continue if the antecedents size is below the allowed maximum (which is the case here anyway,
                     # therefore no additional check) and if the current nodes confidence is different from 1

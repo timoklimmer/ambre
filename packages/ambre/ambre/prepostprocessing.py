@@ -1,6 +1,7 @@
 """Defines the PrePostProcessor class."""
 
 import re
+
 from ambre.settings import Settings
 from ambre.strings import compress_string, decompress_string
 
@@ -11,6 +12,12 @@ class PrePostProcessor:
     def __init__(self, settings: Settings):
         """Init."""
         self.settings = settings
+
+        # Performance optimization: initialize caches first
+        self._normalized_consequents_set = set()
+        self._normalization_cache = {}
+        self._compression_cache = {}
+
         # note: need to sort here on our own here because other provided sorting functions rely on the list computed
         #       here
         self.normalized_consequents = sorted(
@@ -18,13 +25,27 @@ class PrePostProcessor:
         )
         self.compressed_consequents = self.compress_itemset(self.normalized_consequents)
 
+        # Update cached set
+        self._normalized_consequents_set = set(self.normalized_consequents)
+
     def normalize_uncompressed_itemset(self, itemset, sort_result=True):
         """Normalize the given itemset (any iterable)."""
+        # Performance optimization: use caching for repeated normalization
+        if isinstance(itemset, (tuple, frozenset)) and itemset in self._normalization_cache:
+            cached_result = self._normalization_cache[itemset]
+            return cached_result if not sort_result else self.sort_and_move_consequents_first(cached_result)
+
         if self.settings.normalize_whitespace:
             itemset = (re.sub(r"\s+", " ", item).strip() for item in itemset)
         if self.settings.case_insensitive:
             itemset = (item.lower() for item in itemset)
         itemset = set(itemset)
+
+        # Cache the result if itemset is hashable
+        original_itemset = itemset if isinstance(itemset, (tuple, frozenset)) else None
+        if original_itemset and len(self._normalization_cache) < 10000:  # Limit cache size
+            self._normalization_cache[original_itemset] = itemset
+
         if sort_result:
             itemset = self.sort_and_move_consequents_first(itemset)
         return itemset
@@ -40,7 +61,7 @@ class PrePostProcessor:
         """Extract consequents and antecedents from the given itemset."""
         result_consequents, result_antecedents = [], []
         for item in itemset:
-            if item in self.normalized_consequents:
+            if item in self._normalized_consequents_set:
                 result_consequents.append(item)
             else:
                 result_antecedents.append(item)
@@ -57,7 +78,17 @@ class PrePostProcessor:
 
     def compress_item(self, decompressed_item):
         """Compress the given item string."""
-        return compress_string(decompressed_item, input_alphabet=self.settings.item_alphabet)
+        # Performance optimization: cache compressed items
+        if decompressed_item in self._compression_cache:
+            return self._compression_cache[decompressed_item]
+
+        compressed = compress_string(decompressed_item, input_alphabet=self.settings.item_alphabet)
+
+        # Cache the result if cache isn't too large
+        if len(self._compression_cache) < 10000:
+            self._compression_cache[decompressed_item] = compressed
+
+        return compressed
 
     def compress_itemset(self, decompressed_items):
         """Compress the given itemset."""

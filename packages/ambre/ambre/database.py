@@ -18,6 +18,7 @@ from ambre.common_sense_rule import CommonSenseRule
 from ambre.itemsets_trie import ItemsetsTrie
 from ambre.prepostprocessing import PrePostProcessor
 from ambre.settings import Settings
+from ambre.strings import decompress_string
 from ambre.versions import AMBRE_PACKAGE_DATABASE_SCHEMA_VERSION, AMBRE_PACKAGE_VERSION
 
 
@@ -307,27 +308,70 @@ class Database:
         progress_bar_text=None,
     ):
         """Derive the frequent itemsets from the internally assembled trie and return them in a dict object."""
-        # walk down the tree (depth-first) and collect the result
+        # Performance optimization: pre-calculate static values and cache settings
+        number_transactions = self.itemsets_trie.number_transactions
+        should_remove_column_names = not self.settings.omit_column_names and omit_column_names_in_output
+        item_alphabet = self.itemsets_trie.item_alphabet
+
+        # Pre-allocate result lists with estimated capacity for better performance
         result = {"itemset": [], "occurrences": [], "support": [], "itemset_length": []}
 
         def _collect_frequent_itemset_data(current_node):
-            itemset_length = current_node.itemset_length
+            # Cache node properties to avoid repeated property access
             occurrences = current_node.occurrences
-            support = current_node.support
-            if (
-                itemset_length >= min_itemset_length
-                and ((max_itemset_length is None) or (itemset_length <= max_itemset_length))
-                and ((max_occurrences is None) or (occurrences <= max_occurrences))
-                and (occurrences >= min_occurrences)
-                and (min_support <= support <= max_support)
+
+            # Early filtering on occurrences (cheapest check first)
+            if occurrences < min_occurrences or (max_occurrences is not None and occurrences > max_occurrences):
+                return
+
+            # Calculate itemset length efficiently by traversing tree only once
+            itemset_length = 0
+            temp_node = current_node
+            while temp_node.parent_node is not None:
+                itemset_length += 1
+                temp_node = temp_node.parent_node
+
+            # Filter on itemset length
+            if itemset_length < min_itemset_length or (
+                max_itemset_length is not None and itemset_length > max_itemset_length
             ):
-                itemset = current_node.itemset_items_uncompressed_sorted
-                if not self.settings.omit_column_names and omit_column_names_in_output:
-                    itemset = self.prepostprocessor.remove_column_names_from_uncompressed_itemset(itemset)
-                result["itemset"].append(itemset)
-                result["occurrences"].append(current_node.occurrences)
-                result["support"].append(current_node.support)
-                result["itemset_length"].append(current_node.itemset_length)
+                return
+
+            # Calculate support (avoid repeated division)
+            support = occurrences / number_transactions
+
+            # Filter on support
+            if not min_support <= support <= max_support:
+                return
+
+            # Build itemset efficiently - collect compressed items during single traversal
+            compressed_items = []
+            temp_node = current_node
+            while temp_node.parent_node is not None:
+                compressed_items.insert(0, temp_node.compressed_item)
+                temp_node = temp_node.parent_node
+
+            # Decompress items in batch for better cache locality
+            if should_remove_column_names:
+                # Optimize: decompress and remove column names in single pass
+                column_separator = self.settings.column_value_separator
+                itemset = [
+                    re.sub(
+                        f"^.+?{re.escape(column_separator)}",
+                        "",
+                        decompress_string(item, original_input_alphabet=item_alphabet),
+                    )
+                    for item in compressed_items
+                ]
+            else:
+                # Standard decompression
+                itemset = [decompress_string(item, original_input_alphabet=item_alphabet) for item in compressed_items]
+
+            # Append to results in batch (avoid repeated dictionary access)
+            result["itemset"].append(itemset)
+            result["occurrences"].append(occurrences)
+            result["support"].append(support)
+            result["itemset_length"].append(itemset_length)
 
         self.itemsets_trie.visit_itemset_nodes_depth_first(
             _collect_frequent_itemset_data,

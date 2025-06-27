@@ -1,8 +1,9 @@
 """Performance testing."""
 
 import pytest
-from ambre import Database
 from faker import Faker
+
+from ambre import Database
 
 # comment line below to run these tests automatically without explicitly starting them
 pytestmark = pytest.mark.skip("Performance benchmarks are only run on explicit demand.")

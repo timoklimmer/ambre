@@ -1,6 +1,5 @@
 {
     "files.trimTrailingWhitespace": true,
-    "python.formatting.provider": "black",
     "outline.showArrays": false,
     "outline.showBooleans": false,
     "outline.showEnumMembers": false,
@@ -25,23 +24,9 @@
             "color": "#333333"
         }
     ],
-    "python.formatting.blackArgs": [
-        "--line-length=120"
-    ],
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": true,
-    "python.linting.pylintArgs": [
-        "--max-line-length=180",
-        "--disable=dangerous-default-value,too-many-arguments,redefined-outer-name,protected-access,too-few-public-methods,wrong-import-order"
-    ],
-    "python.linting.pycodestyleEnabled": true,
-    "python.linting.pycodestyleArgs": [
-        "--ignore=D205,D400,E203,E211,E501,E231,E722,E302,W391,E265,W503,W292",
-    ],
     "python.testing.pytestArgs": [
         "."
     ],
-    "python.linting.pydocstyleEnabled": true,
     "editor.minimap.enabled": false,
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
